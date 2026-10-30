@@ -7,21 +7,29 @@ const BB = { els: [], by: {}, rx: [], stir: [], chop: [] };
 const CATS = [
   ['tools', 'Tools', '✋'],
   ['kitchen', 'Kitchen', '🍳'],
+  ['power', 'Power', '⚡'],
   ['liquids', 'Liquids', '💧'],
-  ['sauces', 'Sauces', '🥫'],
-  ['drinks', 'Drinks', '🥤'],
   ['powders', 'Powders', '🧂'],
-  ['spices', 'Spices', '🌶'],
-  ['beans', 'Beans', '🫘'],
+  ['minerals', 'Minerals', '⛰'],
+  ['ores', 'Ores', '⛏'],
+  ['gems', 'Gems', '💎'],
+  ['metals', 'Metals', '🔩'],
+  ['molten', 'Molten', '🌋'],
+  ['chem', 'Chemicals', '⚗'],
+  ['salts', 'Salts', '🧪'],
+  ['gases', 'Gases', '💨'],
+  ['energy', 'Fire', '🔥'],
   ['produce', 'Produce', '🥕'],
   ['fruit', 'Fruit', '🍓'],
+  ['beans', 'Beans', '🫘'],
   ['meat', 'Meat', '🥩'],
   ['dairy', 'Dairy & Egg', '🧀'],
   ['bakery', 'Bakery', '🍞'],
   ['sweets', 'Sweets', '🍬'],
+  ['sauces', 'Sauces', '🥫'],
+  ['drinks', 'Drinks', '🥤'],
+  ['spices', 'Spices', '🌶'],
   ['frozen', 'Frozen', '❄'],
-  ['gases', 'Gases', '💨'],
-  ['energy', 'Fire', '🔥'],
   ['life', 'Life', '🐜'],
 ];
 
@@ -48,6 +56,7 @@ el('heat', 'Heat', '#e0682a', 'tools', 'tool', { desc: 'Warms everything under t
 el('cool', 'Cool', '#3a86d0', 'tools', 'tool', { desc: 'Chills everything under the brush.' });
 el('stir', 'Stir', '#b08a58', 'tools', 'tool', { desc: 'Whisk and mix. Whips cream, emulsifies, mashes.' });
 el('chop', 'Chop', '#bfc3c8', 'tools', 'tool', { desc: 'Knife and grinder. Chops, grinds, juices and cracks eggs.' });
+el('zap', 'Zap', '#f8e040', 'tools', 'tool', { desc: 'Electrify metal, graphite, salt water and noble gases under the brush.' });
 el('lighter', 'Lighter', '#f0a020', 'tools', 'tool', { desc: 'Sets fire to anything that burns.' });
 el('sample', 'Sample', '#808080', 'tools', 'tool', { desc: 'Pick the element under the cursor (middle click also works).' });
 

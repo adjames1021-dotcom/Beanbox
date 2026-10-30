@@ -21,8 +21,8 @@ const BEANS = [
 ];
 for (const [k, n, dry, soak, ckd] of BEANS) {
   el(k, n, dry[0], 'beans', 'powder', { dens: 14, slide: 0.7, colors: dry, hot: [250, 'burntfood', 0.003], desc: 'Dried. Soak in water, then simmer to cook.' });
-  el(k + '_soak', 'Soaked ' + n, soak, 'beans', 'powder', { dens: 11, slide: 0.6, fd: 1, w: 1, spoil: 0.00002, hot: [95, k + '_ckd', 0.004] });
-  el(k + '_ckd', 'Cooked ' + n, ckd, 'beans', 'powder', { dens: 11, slide: 0.35, fd: 1, w: 1, spoil: 0.00002, emit: ['beangas', 0.0004, -50], hot: [230, 'burntfood', 0.003], desc: 'Tender. Releases bean gas now and then.' });
+  el(k + '_soak', 'Soaked ' + n, soak, 'beans', 'powder', { nomenu: 1, dens: 11, slide: 0.6, fd: 1, w: 1, spoil: 0.00002, hot: [95, k + '_ckd', 0.004] });
+  el(k + '_ckd', 'Cooked ' + n, ckd, 'beans', 'powder', { nomenu: 1, dens: 11, slide: 0.35, fd: 1, w: 1, spoil: 0.00002, emit: ['beangas', 0.0004, -50], hot: [230, 'burntfood', 0.003], desc: 'Tender. Releases bean gas now and then.' });
   R(k, 'water', k + '_soak', '', 0.006);
   R(k, 'saltwater', k + '_soak', 'water', 0.006);
   C(k + '_ckd', 'beanpaste');
@@ -51,6 +51,13 @@ el('roastedcocoa', 'Roasted Cocoa', '#5a3020', 'beans', 'powder', { dens: 12, sl
 el('vanillabean', 'Vanilla Bean', '#2a1810', 'beans', 'powder', { dens: 10, slide: 0.2, desc: 'Soak in spirits for extract.' });
 el('jellybeans', 'Jelly Beans', '#ff4a6a', 'beans', 'powder', { dens: 14, slide: 0.8, sw: 1, hot: [90, 'meltedcandy', 0.01], colors: ['#ff4a6a', '#ffc83a', '#4ad65a', '#5a8aff', '#ffffff', '#ff8a2a', '#a050e0', '#1a1a1a'] });
 el('magicbean', 'Magic Bean', '#e0c040', 'beans', 'powder', { dens: 14, slide: 0.6, glow: 1, colors: ['#e0c040', '#f0d860', '#c8a830'], desc: 'Plant it in soil. Add water. Stand back.' });
+
+// Only the dried beans show in the Beans menu. Soaked and cooked forms are made by cooking
+// (search finds them too). Things that are only called beans live with their real food group.
+for (const k of ['coffeebeans', 'roastedcoffee']) BB.by[k] && (BB.by[k].cat = 'drinks');
+for (const k of ['cocoabeans', 'roastedcocoa', 'jellybeans']) BB.by[k] && (BB.by[k].cat = 'sweets');
+for (const k of ['greenbeans', 'cookedgreenbeans', 'blisteredbeans', 'beansprouts', 'cookedsprouts']) BB.by[k] && (BB.by[k].cat = 'produce');
+BB.by.vanillabean.cat = 'spices';
 
 // ---------- Produce ----------
 // key, name, raw colors, cut name, cut color, cooked name, cooked color, cooking temp

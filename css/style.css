@@ -109,8 +109,8 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--accent); ou
 #cats button {
   border: 0;
   border-bottom: 1px solid var(--line);
-  padding: 6px 0 4px;
-  font-size: 17px;
+  padding: 4px 0 3px;
+  font-size: 15px;
   line-height: 1;
   display: flex;
   flex-direction: column;
@@ -242,6 +242,11 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--accent); ou
 .chip { padding: 1px 6px; font-size: 11px; border: 1px solid rgba(255, 255, 255, .15); }
 .chip.unk { background: #222 !important; color: #777 !important; }
 .op { color: var(--dim); font-size: 11px; }
+.rules p { margin: 4px 0; }
+.ptable { display: grid; grid-template-columns: repeat(18, minmax(0, 1fr)); gap: 2px; overflow-x: auto; min-width: 560px; }
+.pt { aspect-ratio: 1; padding: 0; font-size: 11px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; border: 1px solid rgba(255, 255, 255, .15); }
+.pt small { font-size: 7px; opacity: .7; margin-bottom: 1px; }
+.pt.off { background: #1a1a1d; color: #4a4a50; }
 .help-grid { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; }
 
 @media (max-width: 640px) {

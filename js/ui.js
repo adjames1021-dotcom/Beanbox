@@ -8,10 +8,10 @@ view.height = glowCanvas.height = H;
 const ctx = view.getContext('2d'), gctx = glowCanvas.getContext('2d');
 const img = ctx.createImageData(W, H), buf = new Uint32Array(img.data.buffer);
 const gimg = gctx.createImageData(W, H), gbuf = new Uint32Array(gimg.data.buffer);
-const BG = pack(5, 5, 7);
+const BG = pack(5, 5, 7), SPARKC = pack(255, 236, 140);
 
 const ui = {
-  cat: 'beans', left: ID.pinto, right: ID.erase, brush: 4, square: false, replace: false,
+  cat: 'minerals', left: ID.sand, right: ID.erase, brush: 4, square: false, replace: false,
   paused: false, stepOnce: false, speed: 1, heatView: false, glow: true,
   drawing: 0, last: null, lineStart: null, mouse: { x: -1, y: -1, inside: false }, hoverText: '',
 };
@@ -65,11 +65,13 @@ function render() {
       c = e.firePal[Math.max(0, Math.min(15, ((f * 15) | 0) + (shade[i] & 1)))];
     } else {
       c = e.pal[shade[i]];
-      const T = temp[i];
-      if (T > 380 && ST[t] !== ST_GAS) c = incandescent(c, T);
+      const ev = elec[i];
+      if (e.plasmaC && plasmaGlow[i]) c = e.plasmaC;
+      else if (ev && ev <= 3 && CONDUCT[t] && !e.plasmaC) c = SPARKC;
+      else { const T = temp[i]; if (T > 380 && ST[t] !== ST_GAS) c = incandescent(c, T); }
     }
     buf[i] = c;
-    if (glow && (e.glow || temp[i] > 520)) gbuf[i] = c;
+    if (glow && (e.glow || temp[i] > 520 || (plasmaGlow[i] && e.plasmaC))) gbuf[i] = c;
   }
   partCount = count;
   drawCursor();
@@ -189,7 +191,7 @@ for (const [key, label, icon] of CATS) {
 function textColor(e) { return e.light ? '#141414' : '#f3f1ec'; }
 function renderTray() {
   const q = searchEl.value.trim().toLowerCase();
-  const list = E.filter(e => e.cat !== 'hidden' && !e.hidden && (q ? e.name.toLowerCase().includes(q) : e.cat === ui.cat));
+  const list = E.filter(e => e.cat !== 'hidden' && !e.hidden && (q ? e.name.toLowerCase().includes(q) : e.cat === ui.cat && !e.nomenu));
   elsEl.innerHTML = '';
   for (const e of list) {
     const b = document.createElement('button');
@@ -261,6 +263,7 @@ $('btnLoad').onclick = () => {
   try { deserialize(s); toast('Kitchen loaded'); } catch (err) { toast('That save could not be read'); }
 };
 $('btnBook').onclick = openBook;
+$('btnTable').onclick = openTable;
 $('btnHelp').onclick = openHelp;
 
 // ---------- Toasts & discoveries ----------
@@ -321,10 +324,23 @@ function buildRecipes() {
   return out.filter(r => r.outs.length);
 }
 let RECIPES = null;
+const GENERAL_RULES = [
+  'Strong acids dissolve metals that sit above hydrogen in the reactivity series, giving off hydrogen and leaving a coloured salt solution. Nitric acid also eats copper and silver (brown NO2). Only aqua regia dissolves gold and platinum.',
+  'Acids fizz out CO2 from carbonates: limestone, marble, chalk, seashells, eggshells, pearls, baking soda and malachite. Acids and bases neutralise each other into salt water and heat.',
+  'A more reactive metal pushes a less reactive one out of its salt solution: iron in copper sulfate plates out copper, copper in silver nitrate grows silver.',
+  'Lithium, sodium, potassium and cesium react with anything watery, from water to juice, making lye and hydrogen. The lower in the group, the bigger the bang. Calcium, strontium and barium fizz gently; hot magnesium does too.',
+  'Metal dust, salt crystals and solutions colour flames: lithium and strontium red, sodium yellow, potassium lilac, calcium orange, copper and barium green.',
+  'Strong bases turn fats into soap and glycerin, eat aluminum and zinc, and dissolve food. Sulfuric acid chars food and sugar. Hydrofluoric acid etches glass and sand. Toxic gases and liquids kill ants, flies, worms and mold.',
+  'Electricity flows through metals, graphite, salt water, acids and noble gases. It splits water into hydrogen and oxygen, lights neon, heats tungsten and nichrome, sparks flammable things and electroplates metal out of salt solutions.',
+  'Radiation passes through most things but lead and concrete stop it. It turns quartz smoky, topaz blue and kills living things.',
+  'Fluorine attacks almost everything, even water and glass. Iridium, osmium, rhodium and ruthenium resist every acid; tantalum, niobium, zirconium and hafnium give in only to hydrofluoric acid.',
+  'Metals melt, and molten metals mix into alloys: copper and tin make bronze, copper and zinc brass, gold and silver electrum. Ores and oxides heated with charcoal smelt into molten metal.',
+];
 function openBook() {
   RECIPES = RECIPES || buildRecipes();
   openModal('<h2>Cookbook</h2><p>' + RECIPES.length + ' recipes across ' + E.filter(e => !e.hidden && e.cat !== 'hidden' && e.cat !== 'tools').length +
     ' elements. You have discovered <b>' + foundCount() + ' of ' + PRODUCTS.size + '</b> results. Undiscovered results show as ???.</p>' +
+    '<h3>General chemistry</h3><div class="rules">' + GENERAL_RULES.map(t => '<p>' + t + '</p>').join('') + '</div><h3>Recipes</h3>' +
     '<div class="bookbar"><input id="bookq" type="search" placeholder="Filter by ingredient"><label><input type="checkbox" id="bookreveal"> Reveal everything</label></div>' +
     '<div id="booklist"></div>');
   const q = $('bookq'), rv = $('bookreveal');
@@ -336,13 +352,41 @@ function openBook() {
       rows.push('<div class="rec">' + r.ins.map(id => chip(id, true)).join('<span class="op">+</span>') +
         (r.tool ? '<span class="op">+ ' + r.tool + '</span>' : '') + '<span class="op">→</span>' +
         r.outs.map(id => chip(id, reveal)).join(' ') + (r.note ? '<span class="op">' + r.note + '</span>' : '') + '</div>');
-      if (rows.length > 700) break;
+      if (rows.length > 3000) break;
     }
     $('booklist').innerHTML = rows.join('') || '<p>No recipes use that.</p>';
   };
   q.addEventListener('input', draw); rv.addEventListener('change', draw);
   draw();
   q.focus();
+}
+function tablePos(z) {
+  if (z === 1) return [1, 1];
+  if (z === 2) return [1, 18];
+  if (z <= 18) { const p = z <= 10 ? 2 : 3, o = z - (p === 2 ? 2 : 10); return [p, o <= 2 ? o : o + 10]; }
+  if (z <= 54) { const p = z <= 36 ? 4 : 5; return [p, z - (p === 4 ? 18 : 36)]; }
+  const p = z <= 86 ? 6 : 7, o = z - (p === 6 ? 54 : 86);
+  if (o <= 2) return [p, o];
+  if (o <= 17) return [p + 3, o];
+  return [p, o - 14];
+}
+function openTable() {
+  let cells = '';
+  BB.periodic.forEach(([sym, key], k) => {
+    const z = k + 1, [row, col] = tablePos(z), e = key && E[ID[key]];
+    const style = 'grid-row:' + row + ';grid-column:' + col + ';' + (e ? 'background:' + e.color + ';color:' + textColor(e) : '');
+    cells += e
+      ? '<button class="pt" data-id="' + e.id + '" style="' + style + '" title="' + z + ' ' + e.name + '"><small>' + z + '</small>' + sym + '</button>'
+      : '<span class="pt off" style="' + style + '" title="' + z + ': only a few atoms have ever existed"><small>' + z + '</small>' + sym + '</span>';
+  });
+  openModal('<h2>Periodic Table</h2><p>Click an element to draw with it. Elements 1 to 96 are all here with their real melting points, densities and reactions. ' +
+    'The greyed-out ones past curium have only ever been made a few atoms at a time.</p><div class="ptable">' + cells + '</div>');
+  $('modalBody').querySelector('.ptable').addEventListener('click', (ev) => {
+    const b = ev.target.closest('button.pt');
+    if (!b) return;
+    const e = E[+b.dataset.id];
+    ui.cat = e.cat; searchEl.value = ''; renderTray(); select(e.id, 1); closeModal();
+  });
 }
 function openHelp() {
   openModal('<h2>How to cook</h2><div class="help-grid">' +
@@ -358,6 +402,9 @@ function openHelp() {
     'Dry beans soak in water, then cook once the water boils. Cooked beans release Bean Gas — keep it away from flames. ' +
     'Use Stir to whip cream, emulsify mayo and mash potatoes; use Chop to crack eggs, grind wheat and juice fruit. ' +
     'Yeast eats sugar and makes dough rise. A Grease Fire hates water: smother it with salt or baking soda instead.</p>' +
+    '<h3>Chemistry and electricity</h3><p>Try acids on metals, sodium in water, metal dust in a flame, an iron nail in copper sulfate, or a Battery touching Copper Wire that runs into a glass tube of Neon. ' +
+    'Stir Rust with Aluminum Dust for thermite and light it with burning magnesium. Smelt ores by heating them with Charcoal. Use the Zap tool to electrify things directly. ' +
+    'The Cookbook lists the general chemistry rules plus every specific recipe.</p>' +
     '<h3>Temperatures</h3><p>Everything carries heat. Metal pans spread it, glass and the counter block it. Switch on Heat view to see it. ' +
     'Most foods cook between 60 and 200°C and burn past about 230°C.</p>');
 }
@@ -393,4 +440,4 @@ updateSel();
 syncButtons();
 fit();
 requestAnimationFrame(() => { fit(); requestAnimationFrame(loop); });
-setTimeout(() => toast('Welcome to Bean Box. Try erasing the board under the mint.'), 400);
+setTimeout(() => toast('Welcome to Bean Box. Erase the boards under the mint and the sodium.'), 400);

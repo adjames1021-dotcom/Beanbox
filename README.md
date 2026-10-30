@@ -1,6 +1,6 @@
 # Bean Box
 
-A falling-sand kitchen sandbox. Pour, pile, heat, stir and chop more than 550 cooking elements and watch around 950 recipes and chemical reactions play out pixel by pixel.
+A falling-sand kitchen and chemistry sandbox. Pour, pile, heat, stir, chop and electrify more than 1,100 elements: food, every element of the periodic table from hydrogen to curium, metals, alloys, ores, rocks, gems, acids, bases, salts and gases. Around 1,100 recipes plus general chemistry rules decide how they all react.
 
 Open `index.html` in any modern browser. No build step or server is needed.
 
@@ -19,14 +19,28 @@ Open `index.html` in any modern browser. No build step or server is needed.
 | `Tab` | Round or square brush |
 | `/` | Search elements |
 
+Soaked and cooked beans, cut vegetables' later stages and other in-between forms are made by cooking. Search finds every element, including ones that are not in a menu.
+
 ## What's in the kitchen
 
 - **Tools**: Eraser, Heat, Cool, Stir (whisk), Chop (knife and grinder), Lighter, Sample.
 - **Kitchen**: pans in steel, cast iron and copper, foil, glass, burners, gas rings, oven coils, fridge and freezer coils, a microwave, faucet, spout, drain, sponges and more.
 - **Food**: 13 kinds of beans (dry, soaked and cooked), 22 vegetables (raw, chopped and cooked), 17 fruits (whole, juice, jam and ice pops), 13 meats and seafoods, dairy and eggs, breads, pastas, pizza, cakes, candy, sauces, soups and drinks.
+- **Periodic table**: elements 1 to 96, each with its real melting point, density and reactivity. Metals come as blocks, dust and molten liquid. The Periodic Table button opens a clickable table.
+- **Earth and chemistry**: sand, rocks, clay, cement, plaster, lava, 21 ores, 17 gems, metal oxides, about 60 salt solutions and crystals, strong and weak acids, bases, explosives, coloured flames, radiation and noble gases.
+- **Electricity**: batteries, copper wire, tungsten filaments, nichrome heating wire and neon tubes. Current splits water, lights gases and electroplates metal.
 - **Physics**: every particle carries a temperature. Heat spreads through metal and is blocked by glass and the counter. Powders pile, liquids layer by density (oil floats on water), gases rise or sink (CO2 sinks and smothers fire), and things boil, freeze, melt, cook, burn, ferment, rot and grow.
 
 ## A few combos to try
+
+- Sodium, potassium or cesium dropped in water (each bigger than the last).
+- An iron nail in Copper Sulfate Solution, or copper in Silver Nitrate Solution.
+- Zinc in Hydrochloric Acid; gold in Aqua Regia; vinegar on limestone or eggshell.
+- Rust stirred with Aluminum Dust makes thermite. Light it with burning magnesium.
+- Hematite or malachite heated with Charcoal smelts into molten metal. Molten copper and tin make bronze.
+- A Battery touching Copper Wire that runs into a glass tube of Neon, Argon or Helium.
+- Sulfuric Acid on sugar, Cooking Oil with Lye, Peroxide with Dish Soap and Yeast.
+- Metal dust or salt crystals sprinkled into a flame.
 
 - Steel pot of water on a Burner, then dry beans: they soak, cook, and slowly release Bean Gas. Keep flames away.
 - Cooking Oil and Popcorn Kernels in a hot pan.
@@ -45,6 +59,10 @@ The **Cookbook** button lists every recipe; results you have not made yet stay h
 - `js/elements.js`: element registry, tools, kitchen hardware, base liquids, powders, spices, gases, fire and frozen elements
 - `js/food.js`: generated families of beans, produce, fruit and meat
 - `js/pantry.js`: soups, sauces, drinks, dairy, bakery, sweets and living things
-- `js/reactions.js`: touch, stir and chop recipes
-- `js/engine.js`: simulation (movement, heat conduction, reactions, special behaviours, save/load)
+- `js/metals.js`: metals, alloys, oxides, ores, salts and flame tests
+- `js/minerals.js`: rocks, earth, building materials, molten minerals and gems
+- `js/chemistry.js`: acids, bases, reagents, explosives, gases, coloured flames, radiation and power parts
+- `js/periodic.js`: non-metals and halogens, plus the periodic table layout
+- `js/reactions.js`: touch, stir and chop recipes for food
+- `js/engine.js`: simulation (movement, heat conduction, recipes, general chemistry, electricity, radiation, save/load)
 - `js/ui.js`: rendering, input, menus, cookbook and the main loop

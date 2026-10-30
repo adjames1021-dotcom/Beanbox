@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bean Box</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand"><span class="bean" aria-hidden="true"></span>BEAN BOX</div>
+    <div class="tb">
+      <button id="btnPause" title="Pause / resume (Space)">Pause</button>
+      <button id="btnStep" title="Advance one frame (F)">Step</button>
+      <button id="btnClear" title="Wipe the whole kitchen">Clear</button>
+      <button id="btnDemo" title="Load the starter kitchen">Demo</button>
+      <button id="btnHeat" title="Temperature view (H)">Heat view</button>
+      <button id="btnGlow" class="on" title="Fire glow (G)">Glow</button>
+      <button id="btnSpeed" title="Simulation speed">1x</button>
+      <button id="btnShape" title="Brush shape (Tab)">Round</button>
+      <button id="btnReplace" title="Draw over existing particles (R)">Replace</button>
+      <button id="btnSave" title="Save to this browser">Save</button>
+      <button id="btnLoad" title="Load your saved kitchen">Load</button>
+      <button id="btnBook" title="Every recipe and combo">Cookbook</button>
+      <button id="btnHelp" title="Controls">Help</button>
+    </div>
+  </header>
+  <main id="main">
+    <div id="stage"><canvas id="view"></canvas><canvas id="glow"></canvas></div>
+    <nav id="cats" aria-label="Element categories"></nav>
+  </main>
+  <div id="tray">
+    <input id="search" type="search" placeholder="Search elements" autocomplete="off" aria-label="Search elements">
+    <div id="els"></div>
+  </div>
+  <footer id="status">
+    <span id="stSel"></span>
+    <span id="stHover"></span>
+    <span id="stInfo"></span>
+  </footer>
+</div>
+<div id="toasts" aria-live="polite"></div>
+<div id="modal" hidden>
+  <div class="box" role="dialog" aria-modal="true">
+    <button class="x" id="modalClose" aria-label="Close">X</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+<script src="js/elements.js"></script>
+<script src="js/food.js"></script>
+<script src="js/pantry.js"></script>
+<script src="js/reactions.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>

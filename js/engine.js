@@ -248,7 +248,7 @@ const BEH = {
     return true;
   },
   microwave(i, x, y) {
-    if (Math.random() < 0.2) {
+    if (Math.random() < 0.35) {
       const d = (Math.random() * 8) | 0, nx = x + DX[d], ny = y + DY[d];
       if (inb(nx, ny) && type[ny * W + nx] === 0) { const j = ny * W + nx; initCell(j, MWAVE, false); aux[j] = d; }
     }
@@ -268,7 +268,7 @@ const BEH = {
       aux[i] = (d + 4 + ((Math.random() * 3) | 0) - 1) & 7;
       return true;
     }
-    temp[j] += te.w ? 5 : 1.5;
+    temp[j] += te.w ? 8 : 2;
     const rules = te.rx && te.rx.get(MWAVE);
     if (rules && Math.random() < rules[0].c) { react(j, i, nx, ny, x, y, rules[0]); return true; }
     if (Math.random() < 0.3) { clearCell(i); return true; }

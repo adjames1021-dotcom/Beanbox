@@ -258,7 +258,7 @@ function syncButtons() {
 $('btnPause').onclick = togglePause;
 $('btnStep').onclick = () => { ui.paused = true; ui.stepOnce = true; syncButtons(); };
 $('btnClear').onclick = () => { clearWorld(); toast('Kitchen wiped clean'); };
-$('btnDemo').onclick = () => { buildDemo(); toast('Starter kitchen loaded'); };
+$('btnDemo').onclick = () => { buildDemo(); toast('Starter kitchen loaded. Erase the boards under the mint and the sodium.'); };
 $('btnHeat').onclick = () => { ui.heatView = !ui.heatView; syncButtons(); };
 $('btnGlow').onclick = () => { ui.glow = !ui.glow; syncButtons(); };
 $('btnField').onclick = () => { ui.fieldView = !ui.fieldView; syncButtons(); };
@@ -450,10 +450,9 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 
-buildDemo();
 renderTray();
 updateSel();
 syncButtons();
 fit();
 requestAnimationFrame(() => { fit(); requestAnimationFrame(loop); });
-setTimeout(() => toast('Welcome to Bean Box. Erase the boards under the mint and the sodium, and watch the magnets.'), 400);
+setTimeout(() => toast('Welcome to Bean Box. Pick an element and start drawing, or press Demo for a starter kitchen.'), 400);

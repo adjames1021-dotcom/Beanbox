@@ -2,7 +2,7 @@
 
 A falling-sand kitchen and chemistry sandbox. Pour, pile, heat, stir, chop, electrify and magnetise more than 1,100 elements: food, every element of the periodic table from hydrogen to curium, metals, alloys, ores, rocks, gems, acids, bases, salts and gases. Around 1,100 recipes plus general chemistry rules decide how they all react.
 
-Open `index.html` in any modern browser. No build step or server is needed.
+Open `index.html` in any modern browser. No build step or server is needed. The kitchen starts empty; press **Demo** for a ready-made starter scene.
 
 ## Controls
 

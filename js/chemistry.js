@@ -87,6 +87,10 @@ el('radium', 'Radium', '#d8f0c0', 'metals', 'powder', { dens: 55, slide: 0.3, gl
 
 // ---------- Power ----------
 el('battery', 'Battery', '#d8a020', 'power', 'solid', { beh: 'battery', cond: 0.1, colors: ['#d8a020', '#2a2a2a', '#d8a020'], desc: 'Sends pulses of electricity into touching metal, graphite, salt water and noble gases.' });
+el('outlet', 'Wall Outlet', '#e8e4dc', 'power', 'solid', { beh: 'battery', cond: 0.05, colors: ['#e8e4dc', '#2a2a2a', '#e8e4dc', '#f2eee6'], desc: 'Mains power for appliances. Touch it to a burner, fridge or microwave, or run Copper Wire from it.' });
+R('gasstove_on', 'water', 'gasstove', 'steam', 0.3);
+R('gasstove_on', 'co2', 'gasstove', '=', 0.3);
+R('gasstove_on', 'foam', 'gasstove', '', 0.3);
 el('rubber', 'Rubber', '#2a2a2a', 'power', 'solid', { cond: 0.05, hot: [200, 'smoke', 0.01], burn: 0.02, ign: 350, desc: 'Insulator. Electricity cannot pass.' });
 el('wire', 'Copper Wire', '#d08848', 'power', 'solid', { econ: 1, metal: 1, mKey: 'copper', metalForm: 1, cond: 0.9, hot: [1085, 'copper_molten', 0.02], desc: 'Thin copper wire for circuits.' });
 el('lamp', 'Lamp Filament', '#8a8c90', 'power', 'solid', { econ: 1, chargeHeat: 120, cond: 0.3, hot: [3422, 'tungsten_molten', 0.01], desc: 'Tungsten filament. Seal it in glass with argon and power it.' });

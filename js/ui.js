@@ -64,7 +64,7 @@ function render() {
     }
     count++;
     const e = E[t];
-    let c;
+    let c, lit = false;
     if (heat) c = HEAT[heatIdx(temp[i])];
     else if (e.firePal) {
       const f = e.lifeMin !== undefined ? life[i] / (e.lifeMin + e.lifeRange + 1) : 1;
@@ -75,13 +75,13 @@ function render() {
       if (e.compass) {
         const x = i % W, b = fieldAt(x, (i / W) | 0), fx = fieldX[b], fy = fieldY[b];
         if (fx * fx + fy * fy > 0.0009) c = COMPASSC[((Math.atan2(fy, fx) * 180 / Math.PI + 360) % 360) | 0];
-      } else if (e.activeC && magnetActive(i, e)) c = e.activeC;
+      } else if (e.activePal && deviceActive(i, e)) { c = e.activePal[shade[i]]; lit = e.activeGlow; }
       else if (e.plasmaC && plasmaGlow[i]) c = e.plasmaC;
       else if (ev && ev <= 3 && CONDUCT[t] && !e.plasmaC) c = SPARKC;
       else { const T = temp[i]; if (T > 380 && ST[t] !== ST_GAS) c = incandescent(c, T); }
     }
     buf[i] = c;
-    if (glow && (e.glow || temp[i] > 520 || (plasmaGlow[i] && e.plasmaC))) gbuf[i] = c;
+    if (glow && (e.glow || lit || temp[i] > 520 || (plasmaGlow[i] && e.plasmaC))) gbuf[i] = c;
   }
   partCount = count;
   drawCursor();
@@ -175,7 +175,8 @@ view.addEventListener('wheel', (ev) => { ev.preventDefault(); setBrush(ui.brush 
 function setBrush(r) { ui.brush = Math.max(0, Math.min(40, r)); updateSel(); }
 
 document.addEventListener('keydown', (ev) => {
-  if (ev.target.tagName === 'INPUT') { if (ev.key === 'Escape') ev.target.blur(); return; }
+  if ((ev.ctrlKey || ev.metaKey) && (ev.key === 's' || ev.key === 'S')) { ev.preventDefault(); openSaves(); return; }
+  if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA') { if (ev.key === 'Escape') ev.target.blur(); return; }
   const k = ev.key;
   if (k === 'Escape') closeModal();
   else if (k === ' ') { ev.preventDefault(); togglePause(); }
@@ -265,16 +266,7 @@ $('btnField').onclick = () => { ui.fieldView = !ui.fieldView; syncButtons(); };
 $('btnReplace').onclick = () => { ui.replace = !ui.replace; syncButtons(); };
 $('btnSpeed').onclick = () => { ui.speed = SPEEDS[(SPEEDS.indexOf(ui.speed) + 1) % SPEEDS.length]; syncButtons(); };
 $('btnShape').onclick = () => { ui.square = !ui.square; syncButtons(); };
-$('btnSave').onclick = () => {
-  try { localStorage.setItem('beanbox.save', serialize()); toast('Kitchen saved in this browser'); }
-  catch (err) { toast('Could not save: browser storage is unavailable'); }
-};
-$('btnLoad').onclick = () => {
-  let s = null;
-  try { s = localStorage.getItem('beanbox.save'); } catch (err) { /* storage blocked */ }
-  if (!s) { toast('No saved kitchen yet. Press Save first.'); return; }
-  try { deserialize(s); toast('Kitchen loaded'); } catch (err) { toast('That save could not be read'); }
-};
+$('btnSaves').onclick = openSaves;
 $('btnBook').onclick = openBook;
 $('btnTable').onclick = openTable;
 $('btnHelp').onclick = openHelp;
@@ -402,6 +394,125 @@ function openTable() {
     ui.cat = e.cat; searchEl.value = ''; renderTray(); select(e.id, 1); closeModal();
   });
 }
+// ---------- Saves ----------
+// Kitchens are kept in this browser's storage (several named slots plus an autosave) and can be
+// copied out as a save code, gzip-compressed and base64-encoded, for backups or sharing.
+const SAVE_KEY = 'beanbox.saves';
+function readSlots() {
+  try {
+    const list = JSON.parse(localStorage.getItem(SAVE_KEY) || '[]');
+    const old = localStorage.getItem('beanbox.save');
+    if (old) { list.push({ name: 'Old save', time: Date.now(), data: 'BB1:' + old }); localStorage.removeItem('beanbox.save'); localStorage.setItem(SAVE_KEY, JSON.stringify(list)); }
+    return list;
+  } catch (err) { return []; }
+}
+function writeSlots(list) {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(list)); return true; } catch (err) { return false; }
+}
+function toB64(buf) {
+  const u = new Uint8Array(buf);
+  let s = '';
+  for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function fromB64(str) {
+  const s = atob(str), u = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
+  return u;
+}
+async function packSave() {
+  const json = serialize();
+  if (!window.CompressionStream) return 'BB1:' + json;
+  const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
+  return 'BB2:' + toB64(await new Response(stream).arrayBuffer());
+}
+async function unpackSave(code) {
+  code = code.trim();
+  if (code.startsWith('BB2:')) {
+    const stream = new Blob([fromB64(code.slice(4))]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return new Response(stream).text();
+  }
+  return code.startsWith('BB1:') ? code.slice(4) : code;
+}
+function thumbnail() {
+  const c = document.createElement('canvas');
+  c.width = W / 2; c.height = H / 2;
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  g.drawImage(view, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.75);
+}
+async function loadCode(code, label) {
+  try {
+    deserialize(await unpackSave(code));
+    toast('Loaded ' + label);
+    return true;
+  } catch (err) {
+    toast('That save could not be read. Check that the whole code was pasted.');
+    return false;
+  }
+}
+async function saveSlot(name, auto) {
+  const data = await packSave(), list = readSlots().filter(x => auto ? !x.auto : x.name !== name);
+  list.unshift({ name, time: Date.now(), thumb: thumbnail(), data, auto: !!auto });
+  if (!writeSlots(list)) { if (!auto) toast('Browser storage is full or blocked. Delete an old save, or copy a save code instead.'); return false; }
+  return true;
+}
+const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+function renderSlots() {
+  const list = readSlots(), box = $('slotList');
+  if (!box) return;
+  box.innerHTML = list.length ? list.map((x, k) =>
+    '<div class="slot" data-k="' + k + '">' + (x.thumb ? '<img alt="" src="' + x.thumb + '">' : '<div class="nothumb"></div>') +
+    '<div class="slotinfo"><b>' + esc(x.auto ? 'Autosave' : x.name) + '</b><span>' + new Date(x.time).toLocaleString() + '</span></div>' +
+    '<div class="slotbtns"><button data-act="load">Load</button>' + (x.auto ? '' : '<button data-act="over">Overwrite</button>') +
+    '<button data-act="del">Delete</button></div></div>').join('')
+    : '<p>No saved kitchens yet. Name this one and press Save.</p>';
+}
+function openSaves() {
+  openModal('<h2>Saves</h2><p>Saves stay in this browser, along with an autosave every minute. Copy a save code to back a kitchen up or move it to another device.</p>' +
+    '<div class="savebar"><input id="saveName" type="text" maxlength="40" placeholder="Name this kitchen"><button id="saveNew">Save</button></div>' +
+    '<div id="slotList" class="slots"></div>' +
+    '<h3>Save codes</h3><div class="savebar"><button id="copyCode">Copy save code</button><button id="loadCodeBtn">Load pasted code</button></div>' +
+    '<textarea id="codeBox" rows="3" placeholder="Paste a save code here, then press Load pasted code"></textarea>');
+  renderSlots();
+  const name = $('saveName');
+  name.value = 'Kitchen ' + new Date().toLocaleDateString();
+  $('saveNew').onclick = async () => {
+    const n = name.value.trim() || 'Untitled kitchen';
+    if (await saveSlot(n, false)) { toast('Saved "' + n + '"'); renderSlots(); }
+  };
+  $('slotList').onclick = async (ev) => {
+    const btn = ev.target.closest('button'), row = ev.target.closest('.slot');
+    if (!btn || !row) return;
+    const list = readSlots(), k = +row.dataset.k, slot = list[k];
+    if (!slot) return;
+    if (btn.dataset.act === 'load') { if (await loadCode(slot.data, '"' + (slot.auto ? 'Autosave' : slot.name) + '"')) closeModal(); }
+    else if (btn.dataset.act === 'over') { if (await saveSlot(slot.name, false)) { toast('Updated "' + slot.name + '"'); renderSlots(); } }
+    else if (btn.dataset.act === 'del') {
+      if (btn.dataset.confirm) { list.splice(k, 1); writeSlots(list); renderSlots(); toast('Save deleted'); }
+      else { btn.dataset.confirm = '1'; btn.textContent = 'Really delete?'; }
+    }
+  };
+  $('copyCode').onclick = async () => {
+    const code = await packSave(), box = $('codeBox');
+    box.value = code;
+    try { await navigator.clipboard.writeText(code); toast('Save code copied (' + Math.round(code.length / 1024) + ' KB)'); }
+    catch (err) { box.focus(); box.select(); toast('Code shown below. Select it and copy.'); }
+  };
+  $('loadCodeBtn').onclick = async () => {
+    const code = $('codeBox').value;
+    if (!code.trim()) { toast('Paste a save code into the box first'); return; }
+    if (await loadCode(code, 'pasted kitchen')) closeModal();
+  };
+}
+async function autosave() {
+  if (!modal.hidden || particleCount() === 0) return;
+  await saveSlot('Autosave', true);
+}
+setInterval(autosave, 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') autosave(); });
+
 function openHelp() {
   openModal('<h2>How to cook</h2><div class="help-grid">' +
     '<kbd>Left drag</kbd><span>Draw the left (red) element</span>' +
@@ -411,7 +522,7 @@ function openHelp() {
     '<kbd>Wheel</kbd> <span>Brush size (also <kbd>[</kbd> <kbd>]</kbd>)</span>' +
     '<kbd>Space</kbd><span>Pause / play</span><kbd>F</kbd><span>Step one frame</span>' +
     '<kbd>M</kbd><span>Magnetic field view</span><kbd>H</kbd><span>Heat view</span><kbd>G</kbd><span>Fire glow</span><kbd>R</kbd><span>Replace mode (paint over things)</span>' +
-    '<kbd>Tab</kbd><span>Round / square brush</span><kbd>/</kbd><span>Search elements</span></div>' +
+    '<kbd>Ctrl + S</kbd><span>Saves</span><kbd>Tab</kbd><span>Round / square brush</span><kbd>/</kbd><span>Search elements</span></div>' +
     '<h3>Getting started</h3><p>Build a pan out of Steel Pan on top of a Burner, add Cooking Oil and Popcorn Kernels, and watch them pop. ' +
     'Dry beans soak in water, then cook once the water boils. Cooked beans release Bean Gas — keep it away from flames. ' +
     'Use Stir to whip cream, emulsify mayo and mash potatoes; use Chop to crack eggs, grind wheat and juice fruit. ' +
@@ -419,6 +530,8 @@ function openHelp() {
     '<h3>Chemistry and electricity</h3><p>Try acids on metals, sodium in water, metal dust in a flame, an iron nail in copper sulfate, or a Battery touching Copper Wire that runs into a glass tube of Neon. ' +
     'Stir Rust with Aluminum Dust for thermite and light it with burning magnesium. Smelt ores by heating them with Charcoal. Use the Zap tool to electrify things directly. ' +
     'The Cookbook lists the general chemistry rules plus every specific recipe.</p>' +
+    '<h3>Power and gas</h3><p>Electric appliances (burners, oven coil, fridge and freezer coils, blast chiller, microwave, induction hob, stirrer) only work while powered: touch them to a Battery or Wall Outlet or run Copper Wire from one. They glow while on. ' +
+    'A Gas Ring starts unlit: light it with the Lighter or any flame, and put it out with water.</p>' +
     '<h3>Magnets</h3><p>Drop Iron Filings near a Neodymium Magnet and they jump to it. Chill a Superconductor with Liquid Nitrogen and it floats over a magnet. ' +
     'Wire an Electromagnet to a Battery for a magnet you can switch off. An Induction Hob heats steel and cast-iron pans but not copper or glass. Field view (M) shows where the field reaches; a Field Compass shows which way it points.</p>' +
     '<h3>Temperatures</h3><p>Everything carries heat. Metal pans spread it, glass and the counter block it. Switch on Heat view to see it. ' +

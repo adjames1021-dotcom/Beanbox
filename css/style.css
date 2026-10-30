@@ -243,6 +243,15 @@ button:focus-visible, input:focus-visible { outline: 1px solid var(--accent); ou
 .chip.unk { background: #222 !important; color: #777 !important; }
 .op { color: var(--dim); font-size: 11px; }
 .rules p { margin: 4px 0; }
+.savebar { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+.savebar input { flex: 1; min-width: 160px; font: inherit; color: var(--text); background: #0b0b0c; border: 1px solid var(--line); padding: 4px 6px; }
+#codeBox { width: 100%; font: 11px var(--mono); color: var(--text); background: #0b0b0c; border: 1px solid var(--line); padding: 6px; resize: vertical; }
+.slots { display: flex; flex-direction: column; gap: 6px; }
+.slot { display: flex; align-items: center; gap: 10px; padding: 6px; border: 1px solid var(--line); background: var(--panel2); flex-wrap: wrap; }
+.slot img, .slot .nothumb { width: 128px; height: 72px; image-rendering: pixelated; background: #000; border: 1px solid var(--line); flex: none; }
+.slotinfo { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 120px; }
+.slotinfo span { color: var(--dim); font-size: 11px; }
+.slotbtns { display: flex; gap: 4px; }
 .ptable { display: grid; grid-template-columns: repeat(18, minmax(0, 1fr)); gap: 2px; overflow-x: auto; min-width: 560px; }
 .pt { aspect-ratio: 1; padding: 0; font-size: 11px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; border: 1px solid rgba(255, 255, 255, .15); }
 .pt small { font-size: 7px; opacity: .7; margin-bottom: 1px; }

@@ -44,7 +44,11 @@ for (const e of E) {
   if (e.heatCap) INVCAP[e.id] = 1 / e.heatCap;
   MAGSRC[e.id] = e.magnet || e.shieldMag ? 1 : 0;
   if (e.magnetizeTo) e.magnetizeId = idOf(e.magnetizeTo, e.key) || 0;
-  if (e.activeColor) { const a = hexRGB(e.activeColor); e.activeC = pack(a[0], a[1], a[2]); }
+  if (e.activeColor) {
+    const a = hexRGB(e.activeColor);
+    e.activePal = new Uint32Array(8);
+    for (let k = 0; k < 8; k++) { const f = 1 + (((k * 5) % 3) - 1) * 0.07; e.activePal[k] = pack(a[0] * f | 0, a[1] * f | 0, a[2] * f | 0); }
+  }
   WET[e.id] = e.state === 'liquid' && (e.w || e.acid || e.base) ? 1 : 0;
   ORG[e.id] = e.fd || e.sw || e.org ? 1 : 0;
   if (e.wrx) {
@@ -273,7 +277,11 @@ function transition(i, x, y, to, sp, pop) {
 // ---------- Special behaviours ----------
 const inb = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
 const BEH = {
-  fixed(i, x, y, e) { if (!e.fixMin || temp[i] < e.fixT) temp[i] = e.fixT; return false; },
+  fixed(i, x, y, e) {
+    if (e.needsPower && !plasmaGlow[i]) return false;
+    if (!e.fixMin || temp[i] < e.fixT) temp[i] = e.fixT;
+    return false;
+  },
   gasstove(i, x, y) {
     temp[i] = 60;
     if (y > 0 && type[i - W] === 0 && Math.random() < 0.6) initCell(i - W, FLAME, false);
@@ -310,7 +318,7 @@ const BEH = {
     return true;
   },
   microwave(i, x, y) {
-    if (Math.random() < 0.35) {
+    if (plasmaGlow[i] && Math.random() < 0.35) {
       const d = (Math.random() * 8) | 0, nx = x + DX[d], ny = y + DY[d];
       if (inb(nx, ny) && type[ny * W + nx] === 0) { const j = ny * W + nx; initCell(j, MWAVE, false); aux[j] = d; }
     }
@@ -350,6 +358,7 @@ const BEH = {
     return true;
   },
   induction(i, x, y) {
+    if (!plasmaGlow[i]) return true;
     // Eddy currents only heat pans the field can grip: magnetic metal directly above the hob
     for (let k = 1; k <= 10 && y - k >= 0; k++) {
       const j = i - k * W, te = E[type[j]];
@@ -358,7 +367,7 @@ const BEH = {
     return true;
   },
   magstir(i, x, y) {
-    if (Math.random() < 0.4) {
+    if (plasmaGlow[i] && Math.random() < 0.4) {
       const nx = x + ((Math.random() * 9) | 0) - 4, ny = y - 1 - ((Math.random() * 16) | 0);
       if (inb(nx, ny) && type[ny * W + nx]) stirCell(ny * W + nx, nx, ny);
     }
@@ -696,13 +705,15 @@ function electricity() {
     if (!CONDUCT[t]) { elec[i] = 0; continue; }
     if (v === 3) {
       const x = i % W, y = (i / W) | 0, e = E[t];
-      if (e.plasmaC || e.emag) plasmaGlow[i] = 12;
+      if (e.plasmaC || e.emag || e.needsPower) plasmaGlow[i] = 12;
       for (let d = 0; d < 8; d += 2) {
         const nx = x + DX[d], ny = y + DY[d];
         if (!inb(nx, ny)) continue;
         const j = ny * W + nx, tj = type[j];
         if (tj === 0) continue;
-        if (CONDUCT[tj]) { if (elec[j] === 0) pendingElec.push(j); continue; }
+        // Appliances are insulated: current runs through them but never into pans, food or water
+        if (CONDUCT[tj]) { if (elec[j] === 0 && (!e.needsPower || E[tj].needsPower)) pendingElec.push(j); continue; }
+        if (e.needsPower) continue;
         const te = E[tj];
         if (WET[tj] && Math.random() < 0.03) become(j, Math.random() < 0.67 ? HYDROGEN : OXYGEN);
         else if (tj === OXYGEN && Math.random() < 0.05) become(j, OZONE);
@@ -731,6 +742,10 @@ function electricity() {
 const MB = 4, MBW = Math.ceil(W / MB), MBH = Math.ceil(H / MB), MNB = MBW * MBH;
 const fieldX = new Float32Array(MNB), fieldY = new Float32Array(MNB), fieldSrc = new Float32Array(MNB), fieldShield = new Uint8Array(MNB);
 let magnetLive = false;
+function deviceActive(i, e) {
+  if (e.magnet) return magnetActive(i, e);
+  return e.needsPower ? plasmaGlow[i] > 0 : false;
+}
 function magnetActive(i, e) {
   if (!e.magnet) return false;
   if (e.emag && !plasmaGlow[i]) return false;
@@ -982,6 +997,7 @@ function buildDemo() {
   fillRect(0, F, W - 1, H - 1, 'counter');
   // Soup pot on a burner
   fillRect(22, F - 3, 110, F - 1, 'burner');
+  fillRect(12, F - 3, 15, F - 1, 'outlet'); fillRect(16, F - 1, 21, F - 1, 'wire');
   fillRect(20, F - 6, 112, F - 4, 'steel');
   fillRect(20, F - 70, 22, F - 7, 'steel'); fillRect(110, F - 70, 112, F - 7, 'steel');
   fillRect(23, F - 44, 109, F - 7, 'water');
@@ -990,6 +1006,7 @@ function buildDemo() {
   fillRect(82, F - 16, 100, F - 8, 'onion_cut', 0.5);
   // Popcorn in an oiled cast-iron pan
   fillRect(150, F - 3, 236, F - 1, 'burner');
+  fillRect(136, F - 3, 139, F - 1, 'outlet'); fillRect(140, F - 1, 149, F - 1, 'wire');
   fillRect(146, F - 5, 240, F - 4, 'castiron');
   fillRect(146, F - 14, 147, F - 6, 'castiron'); fillRect(239, F - 14, 240, F - 6, 'castiron');
   fillRect(148, F - 8, 238, F - 6, 'oil');
@@ -1000,7 +1017,7 @@ function buildDemo() {
   fillRect(274, F - 48, 322, F - 3, 'cola');
   fillRect(270, F - 64, 326, F - 63, 'board');
   fillRect(296, F - 67, 300, F - 65, 'mint');
-  fillRect(340, F - 1, 372, F - 1, 'gasstove');
+  fillRect(340, F - 1, 372, F - 1, 'gasstove_on');
   fillRect(352, F - 46, 360, F - 40, 'marshmallow');
   fillRect(344, F - 39, 368, F - 38, 'steel');
   // Neon sign powered by a battery
@@ -1049,7 +1066,14 @@ function serialize() {
     if (v === tp) tn++; else { if (tn) temps.push(tp + ':' + tn); tp = v; tn = 1; }
   }
   if (tn) temps.push(tp + ':' + tn);
-  return JSON.stringify({ v: 1, w: W, h: H, keys, cells: runs.join(','), temps: temps.join(',') });
+  const auxRuns = [];
+  let ap = aux[0], an = 0;
+  for (let i = 0; i < N; i++) {
+    const v = type[i] ? aux[i] : 0;
+    if (v === ap) an++; else { auxRuns.push(ap + ':' + an); ap = v; an = 1; }
+  }
+  auxRuns.push(ap + ':' + an);
+  return JSON.stringify({ v: 2, w: W, h: H, keys, cells: runs.join(','), temps: temps.join(','), aux: auxRuns.join(',') });
 }
 function deserialize(str) {
   const d = JSON.parse(str);
@@ -1067,4 +1091,12 @@ function deserialize(str) {
     const [v, n] = part.split(':').map(Number);
     for (let c = 0; c < n && i < N; c++, i++) temp[i] = v;
   }
+  if (d.aux) {
+    i = 0;
+    for (const part of d.aux.split(',')) {
+      const [v, n] = part.split(':').map(Number);
+      for (let c = 0; c < n && i < N; c++, i++) if (type[i]) aux[i] = v;
+    }
+  }
 }
+function particleCount() { let n = 0; for (let i = 0; i < N; i++) if (type[i]) n++; return n; }

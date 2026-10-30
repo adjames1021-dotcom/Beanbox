@@ -40,8 +40,8 @@ mag('ybco_sc', 'Cold Superconductor', ['#3a4a7a', '#4a5a8a', '#2a3a6a'], 'powder
 mag('pyrographite', 'Pyrolytic Graphite', ['#2a2a30', '#36363e', '#202026'], 'powder', { dens: 22, slide: 0, diamag: 0.5, econ: 1, desc: 'Strongly diamagnetic. Floats above neodymium magnets at room temperature.' });
 mag('mumetal', 'Mu-Metal', ['#b8b0a0', '#aca494', '#c4bcac'], 'solid', { shieldMag: 1, metal: 1, econ: 1, cond: 0.5, desc: 'Nickel-iron shielding. Magnetic fields cannot pass through it.' });
 mag('compass', 'Field Compass', ['#808080', '#909090', '#707070'], 'solid', { compass: 1, cond: 0.1, desc: 'Each cell shows which way the magnetic field points: red right, yellow down, cyan left, violet up.' });
-mag('inductionhob', 'Induction Hob', ['#1a1a1e', '#26262c', '#121216'], 'solid', { beh: 'induction', cond: 0.05, desc: 'Heats only magnetic pans above it: steel and cast iron cook, copper, glass and aluminum stay cold.' });
-mag('magstirrer', 'Magnetic Stirrer', ['#e8e8ec', '#d8d8dc', '#f4f4f8'], 'solid', { beh: 'magstir', cond: 0.1, desc: 'Spins a stir bar. Mixes whatever sits above it, like the Stir tool.' });
+mag('inductionhob', 'Induction Hob', ['#1a1a1e', '#26262c', '#121216'], 'solid', { beh: 'induction', cond: 0.05, needsPower: 1, econ: 1, activeColor: '#ff2a1a', activeGlow: 1, desc: 'Heats only magnetic pans above it: steel and cast iron cook, copper, glass and aluminum stay cold. Needs power.' });
+mag('magstirrer', 'Magnetic Stirrer', ['#e8e8ec', '#d8d8dc', '#f4f4f8'], 'solid', { beh: 'magstir', cond: 0.1, needsPower: 1, econ: 1, activeColor: '#4aa8ff', activeGlow: 1, desc: 'Spins a stir bar. Mixes whatever sits above it, like the Stir tool. Needs power.' });
 
 // ---------- What is attracted (ferromagnetic) and what is pushed (diamagnetic) ----------
 const FERRO = {

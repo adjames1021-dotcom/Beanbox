@@ -17,6 +17,7 @@ Open `index.html` in any modern browser. No build step or server is needed. The 
 | `H` / `G` / `M` | Heat view / fire glow / magnetic field view |
 | `R` | Replace mode (paint over existing particles) |
 | `Tab` | Round or square brush |
+| `Ctrl` + `S` | Saves |
 | `/` | Search elements |
 
 Soaked and cooked beans, frozen mercury and other in-between forms are made by cooking or reactions rather than picked from a menu. Search finds every element, including ones that are not in a menu.
@@ -24,7 +25,7 @@ Soaked and cooked beans, frozen mercury and other in-between forms are made by c
 ## What's in the kitchen
 
 - **Tools**: Eraser, Heat, Cool, Stir (whisk), Chop (knife and grinder), Lighter, Sample.
-- **Kitchen**: pans in steel, cast iron and copper, foil, glass, burners, gas rings, oven coils, fridge and freezer coils, a microwave, faucet, spout, drain, sponges and more.
+- **Kitchen**: pans in steel, cast iron and copper, foil, glass, burners, gas rings, oven coils, fridge and freezer coils, a microwave, faucet, spout, drain, sponges and more. Electric appliances only run while wired to a Battery or Wall Outlet and glow while on; gas rings must be lit with a flame and go out with water.
 - **Food**: 13 kinds of beans (dry, soaked and cooked), 22 vegetables (raw, chopped and cooked), 17 fruits (whole, juice, jam and ice pops), 13 meats and seafoods, dairy and eggs, breads, pastas, pizza, cakes, candy, sauces, soups and drinks.
 - **Periodic table**: elements 1 to 96, each with its real melting point, density and reactivity. Metals come as blocks, dust and molten liquid. The Periodic Table button opens a clickable table.
 - **Earth and chemistry**: sand, rocks, clay, cement, plaster, lava, 21 ores, 17 gems, metal oxides, about 60 salt solutions and crystals, strong and weak acids, bases, explosives, coloured flames, radiation and noble gases.
@@ -57,7 +58,9 @@ Soaked and cooked beans, frozen mercury and other in-between forms are made by c
 - A Magic Bean planted in Soil.
 - Grapes in the Microwave.
 
-The **Cookbook** button lists every recipe; results you have not made yet stay hidden until you discover them. Discoveries and saves are kept in your browser.
+**Saves** keeps named kitchens with thumbnails in your browser, autosaves every minute, and can copy a compact save code to back up or share a kitchen.
+
+The **Cookbook** button lists every recipe; results you have not made yet stay hidden until you discover them. Discoveries are kept in your browser too.
 
 ## Code layout
 

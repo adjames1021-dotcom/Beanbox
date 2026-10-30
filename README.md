@@ -19,7 +19,7 @@ Open `index.html` in any modern browser. No build step or server is needed.
 | `Tab` | Round or square brush |
 | `/` | Search elements |
 
-Soaked and cooked beans, cut vegetables' later stages and other in-between forms are made by cooking. Search finds every element, including ones that are not in a menu.
+Soaked and cooked beans, frozen mercury and other in-between forms are made by cooking or reactions rather than picked from a menu. Search finds every element, including ones that are not in a menu.
 
 ## What's in the kitchen
 

@@ -14,6 +14,7 @@ const CATS = [
   ['ores', 'Ores', '⛏'],
   ['gems', 'Gems', '💎'],
   ['metals', 'Metals', '🔩'],
+  ['magnets', 'Magnets', '🧲'],
   ['molten', 'Molten', '🌋'],
   ['chem', 'Chemicals', '⚗'],
   ['salts', 'Salts', '🧪'],

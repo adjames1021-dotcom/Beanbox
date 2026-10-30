@@ -12,8 +12,8 @@ const E = BB.els, NE = E.length, ID = {};
 E.forEach((e, i) => { e.id = i; ID[e.key] = i; });
 
 const ST = new Uint8Array(NE), DENS = new Float32Array(NE), COND = new Float32Array(NE);
-const VISC = new Float32Array(NE), IGN = new Uint8Array(NE);
-const CONDUCT = new Uint8Array(NE), WET = new Uint8Array(NE), ORG = new Uint8Array(NE);
+const VISC = new Float32Array(NE), IGN = new Uint8Array(NE), INVCAP = new Float32Array(NE).fill(1);
+const CONDUCT = new Uint8Array(NE), WET = new Uint8Array(NE), ORG = new Uint8Array(NE), MAGSRC = new Uint8Array(NE);
 const PRODUCTS = new Set();
 
 // ---------- Compile element definitions ----------
@@ -41,6 +41,10 @@ for (const e of E) {
   ST[e.id] = STATE_CODE[e.state];
   DENS[e.id] = e.dens || 0; COND[e.id] = e.cond || 0; VISC[e.id] = e.visc || 0; IGN[e.id] = e.ignites ? 1 : 0;
   CONDUCT[e.id] = e.econ ? 1 : 0;
+  if (e.heatCap) INVCAP[e.id] = 1 / e.heatCap;
+  MAGSRC[e.id] = e.magnet || e.shieldMag ? 1 : 0;
+  if (e.magnetizeTo) e.magnetizeId = idOf(e.magnetizeTo, e.key) || 0;
+  if (e.activeColor) { const a = hexRGB(e.activeColor); e.activeC = pack(a[0], a[1], a[2]); }
   WET[e.id] = e.state === 'liquid' && (e.w || e.acid || e.base) ? 1 : 0;
   ORG[e.id] = e.fd || e.sw || e.org ? 1 : 0;
   if (e.wrx) {
@@ -342,6 +346,21 @@ const BEH = {
         const j = ny * W + nx;
         if (CONDUCT[type[j]] && elec[j] === 0) { elec[j] = 3; elecLive = true; }
       }
+    }
+    return true;
+  },
+  induction(i, x, y) {
+    // Eddy currents only heat pans the field can grip: magnetic metal directly above the hob
+    for (let k = 1; k <= 10 && y - k >= 0; k++) {
+      const j = i - k * W, te = E[type[j]];
+      if (te.ferro && te.state === 'solid' && temp[j] < (te.curie || 9999) && temp[j] < 420) temp[j] += 3;
+    }
+    return true;
+  },
+  magstir(i, x, y) {
+    if (Math.random() < 0.4) {
+      const nx = x + ((Math.random() * 9) | 0) - 4, ny = y - 1 - ((Math.random() * 16) | 0);
+      if (inb(nx, ny) && type[ny * W + nx]) stirCell(ny * W + nx, nx, ny);
     }
     return true;
   },
@@ -677,7 +696,7 @@ function electricity() {
     if (!CONDUCT[t]) { elec[i] = 0; continue; }
     if (v === 3) {
       const x = i % W, y = (i / W) | 0, e = E[t];
-      if (e.plasmaC) plasmaGlow[i] = 12;
+      if (e.plasmaC || e.emag) plasmaGlow[i] = 12;
       for (let d = 0; d < 8; d += 2) {
         const nx = x + DX[d], ny = y + DY[d];
         if (!inb(nx, ny)) continue;
@@ -703,6 +722,95 @@ function electricity() {
   for (const j of pendingElec) if (elec[j] === 0 && CONDUCT[type[j]]) { elec[j] = 3; live = true; }
   pendingElec.length = 0;
   elecLive = live;
+}
+
+// ---------- Magnetism ----------
+// The field is solved on 4x4-cell blocks every few frames: each block of magnet cells pulls
+// toward itself with strength / distance². Mu-metal blocks the field. Ferromagnetic powders and
+// liquids drift along it and stick to magnets; diamagnets and cold superconductors are pushed away.
+const MB = 4, MBW = Math.ceil(W / MB), MBH = Math.ceil(H / MB), MNB = MBW * MBH;
+const fieldX = new Float32Array(MNB), fieldY = new Float32Array(MNB), fieldSrc = new Float32Array(MNB), fieldShield = new Uint8Array(MNB);
+let magnetLive = false;
+function magnetActive(i, e) {
+  if (!e.magnet) return false;
+  if (e.emag && !plasmaGlow[i]) return false;
+  if (e.coldMagnet !== undefined && temp[i] > e.coldMagnet) return false;
+  return true;
+}
+function shielded(bx, by, tx, ty) {
+  const n = Math.max(Math.abs(tx - bx), Math.abs(ty - by));
+  for (let k = 1; k < n; k++) {
+    const x = Math.round(bx + (tx - bx) * k / n), y = Math.round(by + (ty - by) * k / n);
+    if (fieldShield[y * MBW + x]) return true;
+  }
+  return false;
+}
+function updateField() {
+  fieldSrc.fill(0); fieldShield.fill(0);
+  let any = false, anyShield = false;
+  for (let i = 0; i < N; i++) {
+    const t = type[i];
+    if (!MAGSRC[t]) continue;
+    const e = E[t], b = (((i / W) | 0) >> 2) * MBW + ((i % W) >> 2);
+    if (e.shieldMag) { fieldShield[b] = 1; anyShield = true; continue; }
+    if (magnetActive(i, e)) { fieldSrc[b] += e.magnet; any = true; }
+  }
+  if (!any) { if (magnetLive) { fieldX.fill(0); fieldY.fill(0); } magnetLive = false; return; }
+  fieldX.fill(0); fieldY.fill(0);
+  magnetLive = true;
+  for (let b = 0; b < MNB; b++) {
+    const S = fieldSrc[b];
+    if (!S) continue;
+    const bx = b % MBW, by = (b / MBW) | 0, R = Math.min(18, Math.ceil(Math.sqrt(S / 0.02) / MB));
+    for (let dy = -R; dy <= R; dy++) {
+      const ty = by + dy;
+      if (ty < 0 || ty >= MBH) continue;
+      for (let dx = -R; dx <= R; dx++) {
+        const tx = bx + dx;
+        if (tx < 0 || tx >= MBW || (!dx && !dy)) continue;
+        const d2 = dx * dx + dy * dy, F = S / (d2 * MB * MB + 4);
+        if (F < 0.02 || (anyShield && shielded(bx, by, tx, ty))) continue;
+        const d = Math.sqrt(d2), tb = ty * MBW + tx;
+        fieldX[tb] -= dx / d * F; fieldY[tb] -= dy / d * F;
+      }
+    }
+  }
+}
+const fieldAt = (x, y) => (y >> 2) * MBW + (x >> 2);
+function magnetMove(i, x, y, t, e) {
+  const T = temp[i];
+  const k = e.ferro && T < (e.curie || 9999) ? e.ferro : e.diamag ? -e.diamag : 0;
+  if (!k) return false;
+  if (k > 0) {
+    // Touching a live magnet: stay stuck to it
+    for (let d = 0; d < 8; d += 2) {
+      const nx = x + DX[d], ny = y + DY[d];
+      if (!inb(nx, ny)) continue;
+      const j = ny * W + nx;
+      if (MAGSRC[type[j]] && ST[type[j]] === ST_SOLID && magnetActive(j, E[type[j]])) return true;
+    }
+  }
+  const b = fieldAt(x, y);
+  let fx = fieldX[b], fy = fieldY[b];
+  const m = Math.hypot(fx, fy) * Math.abs(k);
+  if (m < 0.03) return false;
+  if (k < 0) { fx = -fx; fy = -fy; }
+  // Attraction falls off with the field; diamagnetic push falls off much faster (with field squared)
+  const p = k > 0 ? Math.min(1, m * 0.5) : Math.min(1, (m / 5) * (m / 5));
+  if (Math.random() < p) {
+    const ax = Math.abs(fx), ay = Math.abs(fy);
+    let dx = Math.random() * (ax + ay) < ax ? Math.sign(fx) : 0, dy = dx ? 0 : Math.sign(fy);
+    if (dx && Math.random() < ay / (ax + ay)) dy = Math.sign(fy);
+    const nx = x + dx, ny = y + dy;
+    if (inb(nx, ny)) {
+      const j = ny * W + nx, tj = type[j], s = ST[tj];
+      if (tj === 0 || s === ST_GAS || (s === ST_LIQ && ST[t] !== ST_LIQ && !E[tj].ferro)) { swap(i, j); return true; }
+      // A magnet drags iron out of sand: shoulder past loose non-magnetic grains
+      if ((s === ST_POW || s === ST_LIQ) && !E[tj].ferro && !E[tj].diamag && Math.random() < 0.3) { swap(i, j); return true; }
+    }
+    return true;
+  }
+  return k < 0 && p > 0.2;
 }
 
 // ---------- Per-cell update ----------
@@ -743,6 +851,13 @@ function update(i, x, y, t) {
       }
     }
   }
+  if (magnetLive) {
+    if (e.magnetizeId && Math.random() < 0.01) {
+      const b = fieldAt(x, y);
+      if (Math.hypot(fieldX[b], fieldY[b]) > 3) { become(i, e.magnetizeId); return; }
+    }
+    if ((e.ferro || e.diamag) && s !== ST_SOLID && magnetMove(i, x, y, t, e)) return;
+  }
   if (s === ST_POW) movePowder(i, x, y, t, e);
   else if (s === ST_LIQ) moveLiquid(i, x, y, t, e);
   else if (s === ST_GAS || s === ST_FIRE) moveGas(i, x, y, t, e);
@@ -754,13 +869,14 @@ function conduct() {
     for (let x = 0; x < W; x++) {
       const i = row + x, ti = type[i], ci = COND[ti];
       if (ci === 0) continue;
+      const ki = INVCAP[ti];
       if (x < W - 1) {
-        const j = i + 1, cj = COND[type[j]], c = ci < cj ? ci : cj;
-        if (c > 0) { const d = (temp[j] - temp[i]) * c * 0.25; temp[i] += d; temp[j] -= d; }
+        const tj = type[i + 1], cj = COND[tj], c = ci < cj ? ci : cj;
+        if (c > 0) { const d = (temp[i + 1] - temp[i]) * c * 0.25; temp[i] += d * ki; temp[i + 1] -= d * INVCAP[tj]; }
       }
       if (y < H - 1) {
-        const j = i + W, cj = COND[type[j]], c = ci < cj ? ci : cj;
-        if (c > 0) { const d = (temp[j] - temp[i]) * c * 0.25; temp[i] += d; temp[j] -= d; }
+        const tj = type[i + W], cj = COND[tj], c = ci < cj ? ci : cj;
+        if (c > 0) { const d = (temp[i + W] - temp[i]) * c * 0.25; temp[i] += d * ki; temp[i + W] -= d * INVCAP[tj]; }
       }
       if (ti === 0) temp[i] += (AMBIENT - temp[i]) * 0.015;
     }
@@ -779,6 +895,7 @@ function step() {
     }
   }
   electricity();
+  if ((tick & 3) === 0) updateField();
   conduct();
 }
 
@@ -902,6 +1019,15 @@ function buildDemo() {
   fillRect(272, 96, 273, 127, 'glass'); fillRect(315, 96, 316, 127, 'glass');
   fillRect(274, 102, 314, 127, 'copper_so4');
   fillRect(292, 90, 295, 124, 'iron');
+  // A neodymium magnet with a cold superconductor floating over it, above the soup pot
+  fillRect(50, 96, 120, 97, 'board');
+  fillRect(72, 90, 98, 95, 'neomagnet');
+  fillRect(80, 72, 90, 76, 'ybco_sc');
+  // Iron filings on a shelf below a ceiling magnet: they jump up and hang in a beard
+  fillRect(336, 16, 360, 22, 'neomagnet');
+  fillRect(326, 46, 370, 47, 'board');
+  fillRect(330, 39, 366, 45, 'sand', 0.8);
+  fillRect(330, 39, 366, 45, 'iron_dust', 0.5);
 }
 
 // ---------- Save / load ----------

@@ -12,7 +12,7 @@ const BG = pack(5, 5, 7), SPARKC = pack(255, 236, 140);
 
 const ui = {
   cat: 'minerals', left: ID.sand, right: ID.erase, brush: 4, square: false, replace: false,
-  paused: false, stepOnce: false, speed: 1, heatView: false, glow: true,
+  paused: false, stepOnce: false, speed: 1, heatView: false, glow: true, fieldView: false,
   drawing: 0, last: null, lineStart: null, mouse: { x: -1, y: -1, inside: false }, hoverText: '',
 };
 
@@ -38,6 +38,8 @@ const [HEAT, HEAT_DIM] = gradient([
   [100, '#ffe000'], [200, '#ff8000'], [400, '#ff2000'], [800, '#ff60b0'], [1500, '#ffffff'],
 ], HEAT_LO, HEAT_HI, HEAT_N);
 const heatIdx = (T) => { const k = ((T - HEAT_LO) / (HEAT_HI - HEAT_LO) * (HEAT_N - 1)) | 0; return k < 0 ? 0 : k >= HEAT_N ? HEAT_N - 1 : k; };
+const [FIELDC] = gradient([[0, '#05050a'], [0.3, '#2a0a50'], [1.5, '#6a20c0'], [5, '#c060ff'], [20, '#ffe0ff']], 0, 20, 256);
+const [COMPASSC] = gradient([[0, '#ff3030'], [90, '#ffd030'], [180, '#30e0ff'], [270, '#a040ff'], [360, '#ff3030']], 0, 360, 360);
 const [GLOWC] = gradient([[380, '#601000'], [600, '#d03000'], [900, '#ff9020'], [1400, '#fff0c0']], 380, 1400, 256);
 
 function incandescent(c, T) {
@@ -50,12 +52,16 @@ function incandescent(c, T) {
 // ---------- Rendering ----------
 let partCount = 0;
 function render() {
-  const heat = ui.heatView, glow = ui.glow && !heat;
+  const heat = ui.heatView, glow = ui.glow && !heat, fieldOn = ui.fieldView && !heat;
   if (glow) gbuf.fill(0);
   let count = 0;
   for (let i = 0; i < N; i++) {
     const t = type[i];
-    if (t === 0) { buf[i] = heat ? HEAT_DIM[heatIdx(temp[i])] : BG; continue; }
+    if (t === 0) {
+      if (fieldOn) { const b = fieldAt(i % W, (i / W) | 0), m = Math.hypot(fieldX[b], fieldY[b]); buf[i] = m > 0.02 ? FIELDC[Math.min(255, (m / 20 * 255) | 0)] : BG; }
+      else buf[i] = heat ? HEAT_DIM[heatIdx(temp[i])] : BG;
+      continue;
+    }
     count++;
     const e = E[t];
     let c;
@@ -66,7 +72,11 @@ function render() {
     } else {
       c = e.pal[shade[i]];
       const ev = elec[i];
-      if (e.plasmaC && plasmaGlow[i]) c = e.plasmaC;
+      if (e.compass) {
+        const x = i % W, b = fieldAt(x, (i / W) | 0), fx = fieldX[b], fy = fieldY[b];
+        if (fx * fx + fy * fy > 0.0009) c = COMPASSC[((Math.atan2(fy, fx) * 180 / Math.PI + 360) % 360) | 0];
+      } else if (e.activeC && magnetActive(i, e)) c = e.activeC;
+      else if (e.plasmaC && plasmaGlow[i]) c = e.plasmaC;
       else if (ev && ev <= 3 && CONDUCT[t] && !e.plasmaC) c = SPARKC;
       else { const T = temp[i]; if (T > 380 && ST[t] !== ST_GAS) c = incandescent(c, T); }
     }
@@ -172,6 +182,7 @@ document.addEventListener('keydown', (ev) => {
   else if (k === 'f' || k === 'F') { ui.paused = true; ui.stepOnce = true; syncButtons(); }
   else if (k === 'h' || k === 'H') { ui.heatView = !ui.heatView; syncButtons(); }
   else if (k === 'g' || k === 'G') { ui.glow = !ui.glow; syncButtons(); }
+  else if (k === 'm' || k === 'M') { ui.fieldView = !ui.fieldView; syncButtons(); }
   else if (k === 'r' || k === 'R') { ui.replace = !ui.replace; syncButtons(); }
   else if (k === '[' || k === '-') setBrush(ui.brush - 1);
   else if (k === ']' || k === '=' || k === '+') setBrush(ui.brush + 1);
@@ -238,6 +249,7 @@ function syncButtons() {
   $('btnPause').classList.toggle('on', ui.paused);
   $('btnHeat').classList.toggle('on', ui.heatView);
   $('btnGlow').classList.toggle('on', ui.glow);
+  $('btnField').classList.toggle('on', ui.fieldView);
   $('btnReplace').classList.toggle('on', ui.replace);
   $('btnSpeed').textContent = ui.speed === 0.5 ? '½x' : ui.speed + 'x';
   $('btnShape').textContent = ui.square ? 'Square' : 'Round';
@@ -249,6 +261,7 @@ $('btnClear').onclick = () => { clearWorld(); toast('Kitchen wiped clean'); };
 $('btnDemo').onclick = () => { buildDemo(); toast('Starter kitchen loaded'); };
 $('btnHeat').onclick = () => { ui.heatView = !ui.heatView; syncButtons(); };
 $('btnGlow').onclick = () => { ui.glow = !ui.glow; syncButtons(); };
+$('btnField').onclick = () => { ui.fieldView = !ui.fieldView; syncButtons(); };
 $('btnReplace').onclick = () => { ui.replace = !ui.replace; syncButtons(); };
 $('btnSpeed').onclick = () => { ui.speed = SPEEDS[(SPEEDS.indexOf(ui.speed) + 1) % SPEEDS.length]; syncButtons(); };
 $('btnShape').onclick = () => { ui.square = !ui.square; syncButtons(); };
@@ -334,6 +347,7 @@ const GENERAL_RULES = [
   'Electricity flows through metals, graphite, salt water, acids and noble gases. It splits water into hydrogen and oxygen, lights neon, heats tungsten and nichrome, sparks flammable things and electroplates metal out of salt solutions.',
   'Radiation passes through most things but lead and concrete stop it. It turns quartz smoky, topaz blue and kills living things.',
   'Fluorine attacks almost everything, even water and glass. Iridium, osmium, rhodium and ruthenium resist every acid; tantalum, niobium, zirconium and hafnium give in only to hydrofluoric acid.',
+  'Magnets pull iron, steel, nickel, cobalt, magnetite and ferrofluid toward them and hold them on. Heat a magnet past its Curie point and it lets go. Electromagnets work only while powered, superconducting magnets only below -250°C. Bismuth, pyrolytic graphite and chilled superconductors are pushed away and can float. Mu-metal blocks fields; a strong field magnetises steel.',
   'Metals melt, and molten metals mix into alloys: copper and tin make bronze, copper and zinc brass, gold and silver electrum. Ores and oxides heated with charcoal smelt into molten metal.',
 ];
 function openBook() {
@@ -396,7 +410,7 @@ function openHelp() {
     '<kbd>Middle click</kbd><span>Pick up the element under the cursor</span>' +
     '<kbd>Wheel</kbd> <span>Brush size (also <kbd>[</kbd> <kbd>]</kbd>)</span>' +
     '<kbd>Space</kbd><span>Pause / play</span><kbd>F</kbd><span>Step one frame</span>' +
-    '<kbd>H</kbd><span>Heat view</span><kbd>G</kbd><span>Fire glow</span><kbd>R</kbd><span>Replace mode (paint over things)</span>' +
+    '<kbd>M</kbd><span>Magnetic field view</span><kbd>H</kbd><span>Heat view</span><kbd>G</kbd><span>Fire glow</span><kbd>R</kbd><span>Replace mode (paint over things)</span>' +
     '<kbd>Tab</kbd><span>Round / square brush</span><kbd>/</kbd><span>Search elements</span></div>' +
     '<h3>Getting started</h3><p>Build a pan out of Steel Pan on top of a Burner, add Cooking Oil and Popcorn Kernels, and watch them pop. ' +
     'Dry beans soak in water, then cook once the water boils. Cooked beans release Bean Gas — keep it away from flames. ' +
@@ -405,6 +419,8 @@ function openHelp() {
     '<h3>Chemistry and electricity</h3><p>Try acids on metals, sodium in water, metal dust in a flame, an iron nail in copper sulfate, or a Battery touching Copper Wire that runs into a glass tube of Neon. ' +
     'Stir Rust with Aluminum Dust for thermite and light it with burning magnesium. Smelt ores by heating them with Charcoal. Use the Zap tool to electrify things directly. ' +
     'The Cookbook lists the general chemistry rules plus every specific recipe.</p>' +
+    '<h3>Magnets</h3><p>Drop Iron Filings near a Neodymium Magnet and they jump to it. Chill a Superconductor with Liquid Nitrogen and it floats over a magnet. ' +
+    'Wire an Electromagnet to a Battery for a magnet you can switch off. An Induction Hob heats steel and cast-iron pans but not copper or glass. Field view (M) shows where the field reaches; a Field Compass shows which way it points.</p>' +
     '<h3>Temperatures</h3><p>Everything carries heat. Metal pans spread it, glass and the counter block it. Switch on Heat view to see it. ' +
     'Most foods cook between 60 and 200°C and burn past about 230°C.</p>');
 }
@@ -440,4 +456,4 @@ updateSel();
 syncButtons();
 fit();
 requestAnimationFrame(() => { fit(); requestAnimationFrame(loop); });
-setTimeout(() => toast('Welcome to Bean Box. Erase the boards under the mint and the sodium.'), 400);
+setTimeout(() => toast('Welcome to Bean Box. Erase the boards under the mint and the sodium, and watch the magnets.'), 400);

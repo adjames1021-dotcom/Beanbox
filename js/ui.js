@@ -76,8 +76,7 @@ function render() {
         const x = i % W, b = fieldAt(x, (i / W) | 0), fx = fieldX[b], fy = fieldY[b];
         if (fx * fx + fy * fy > 0.0009) c = COMPASSC[((Math.atan2(fy, fx) * 180 / Math.PI + 360) % 360) | 0];
       } else if (e.activePal && deviceActive(i, e)) { c = e.activePal[shade[i]]; lit = e.activeGlow; }
-      else if (e.plasmaC && plasmaGlow[i]) c = e.plasmaC;
-      else if (ev && ev <= 3 && CONDUCT[t] && !e.plasmaC) c = SPARKC;
+      else if (plasmaGlow[i] && CONDUCT[t]) { c = e.plasmaC || (ev && ev <= 3 ? SPARKC : e.powPal[shade[i]]); lit = true; }
       else { const T = temp[i]; if (T > 380 && ST[t] !== ST_GAS) c = incandescent(c, T); }
     }
     buf[i] = c;
@@ -147,6 +146,12 @@ view.addEventListener('pointerdown', (ev) => {
   const p = toGrid(ev);
   ui.mouse = Object.assign(p, { inside: true });
   if (ev.button === 1) { sampleAt(p.x, p.y); return; }
+  if (ev.button === 0 && !ev.shiftKey && inb(p.x, p.y) && E[type[p.y * W + p.x]].toggleId && E[ui.left].key !== 'erase') {
+    const on = E[type[p.y * W + p.x]].key === 'switch';
+    toggleAt(p.x, p.y);
+    toast(on ? 'Switch on' : 'Switch off');
+    return;
+  }
   ui.drawing = ev.button === 2 ? 2 : 1;
   if (ev.shiftKey) { ui.lineStart = p; return; }
   ui.last = p;
@@ -172,6 +177,8 @@ view.addEventListener('pointerleave', (ev) => { if (!ui.drawing) ui.mouse.inside
 view.addEventListener('contextmenu', (ev) => ev.preventDefault());
 view.addEventListener('wheel', (ev) => { ev.preventDefault(); setBrush(ui.brush + (ev.deltaY < 0 ? 1 : -1)); }, { passive: false });
 
+document.addEventListener('keyup', (ev) => { if (ev.key === 'Delete' || ev.key === 'Backspace') ui.deleting = false; });
+window.addEventListener('blur', () => { ui.deleting = false; });
 function setBrush(r) { ui.brush = Math.max(0, Math.min(40, r)); updateSel(); }
 
 document.addEventListener('keydown', (ev) => {
@@ -179,6 +186,14 @@ document.addEventListener('keydown', (ev) => {
   if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA') { if (ev.key === 'Escape') ev.target.blur(); return; }
   const k = ev.key;
   if (k === 'Escape') closeModal();
+  else if (k === 'Delete' || k === 'Backspace') {
+    ev.preventDefault();
+    const m = ui.mouse;
+    if (ev.shiftKey && m.inside && inb(m.x, m.y) && type[m.y * W + m.x]) {
+      const name = E[type[m.y * W + m.x]].name, n = removeConnected(m.x, m.y);
+      toast('Removed ' + n.toLocaleString() + ' ' + name);
+    } else ui.deleting = true;
+  }
   else if (k === ' ') { ev.preventDefault(); togglePause(); }
   else if (k === 'f' || k === 'F') { ui.paused = true; ui.stepOnce = true; syncButtons(); }
   else if (k === 'h' || k === 'H') { ui.heatView = !ui.heatView; syncButtons(); }
@@ -519,6 +534,8 @@ function openHelp() {
     '<kbd>Right drag</kbd><span>Draw the right (blue) element, the Eraser by default</span>' +
     '<kbd>Shift + drag</kbd><span>Draw a straight line</span>' +
     '<kbd>Middle click</kbd><span>Pick up the element under the cursor</span>' +
+    '<kbd>Delete</kbd><span>Hold to erase under the cursor; Shift + Delete removes the whole connected piece</span>' +
+    '<kbd>Click a Switch</kbd><span>Flip it on or off</span>' +
     '<kbd>Wheel</kbd> <span>Brush size (also <kbd>[</kbd> <kbd>]</kbd>)</span>' +
     '<kbd>Space</kbd><span>Pause / play</span><kbd>F</kbd><span>Step one frame</span>' +
     '<kbd>M</kbd><span>Magnetic field view</span><kbd>H</kbd><span>Heat view</span><kbd>G</kbd><span>Fire glow</span><kbd>R</kbd><span>Replace mode (paint over things)</span>' +
@@ -531,7 +548,8 @@ function openHelp() {
     'Stir Rust with Aluminum Dust for thermite and light it with burning magnesium. Smelt ores by heating them with Charcoal. Use the Zap tool to electrify things directly. ' +
     'The Cookbook lists the general chemistry rules plus every specific recipe.</p>' +
     '<h3>Power and gas</h3><p>Electric appliances (burners, oven coil, fridge and freezer coils, blast chiller, microwave, induction hob, stirrer) only work while powered: touch them to a Battery or Wall Outlet or run Copper Wire from one. They glow while on. ' +
-    'A Gas Ring starts unlit: light it with the Lighter or any flame, and put it out with water.</p>' +
+    'Everything that carries current glows while powered. Put a Switch in a wire and click it to turn things on and off. A Gas Ring starts unlit: light it with the Lighter or any flame, and put it out with water.</p>' +
+    '<h3>Ant colonies</h3><p>Fill a glass tank with Soil, drop in a Queen Ant and some Ants, and leave food on top. Workers dig tunnels, pile dirt into an anthill and carry food down; the queen digs a den and lays eggs that hatch into more workers.</p>' +
     '<h3>Magnets</h3><p>Drop Iron Filings near a Neodymium Magnet and they jump to it. Chill a Superconductor with Liquid Nitrogen and it floats over a magnet. ' +
     'Wire an Electromagnet to a Battery for a magnet you can switch off. An Induction Hob heats steel and cast-iron pans but not copper or glass. Field view (M) shows where the field reaches; a Field Compass shows which way it points.</p>' +
     '<h3>Temperatures</h3><p>Everything carries heat. Metal pans spread it, glass and the counter block it. Switch on Heat view to see it. ' +
@@ -549,6 +567,7 @@ function hoverInfo() {
 }
 function loop(now) {
   if (ui.drawing && !ui.lineStart && ui.mouse.inside) paintAt(ui.mouse.x, ui.mouse.y);
+  if (ui.deleting && ui.mouse.inside) applyTool('erase', ui.mouse.x, ui.mouse.y, ui.brush, ui.square);
   if (!ui.paused) {
     if (ui.speed < 1) { if (++halfTick % 2 === 0) step(); }
     else for (let s = 0; s < ui.speed; s++) step();

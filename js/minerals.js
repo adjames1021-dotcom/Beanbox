@@ -6,8 +6,8 @@ const gem = (k, n, cols, p) => el(k, n, cols[0], 'gems', 'powder', Object.assign
 const melt = (k, n, cols, p) => el(k, n, cols[0], 'molten', 'liquid', Object.assign({ dens: 28, visc: 0.7, glow: 1, ignites: 1, hotStart: 1, colors: cols }, p));
 
 // ---------- Sand, soil, rock ----------
-rock('sand', 'Sand', '#d8c08a', { dens: 30, slide: 0.9, si: 1, colors: ['#d8c08a', '#ccb47e', '#e4cc96', '#c4ac76'], hot: [1700, 'moltenglass', 0.02], wrx: { to: 'wetsand', nb: '', c: 0.02 }, desc: 'Melts into glass at 1700°C.' });
-rock('wetsand', 'Wet Sand', '#a8905a', { dens: 33, slide: 0.05, si: 1, colors: ['#a8905a', '#9c844e', '#b49c66'], hot: [100, 'sand', 0.01, 'steam'], decay: [0.00003, 'sandstone'], desc: 'Packs into shapes. Bakes dry.' });
+rock('sand', 'Sand', '#d8c08a', { dens: 30, slide: 0.9, si: 1, diggable: 1, colors: ['#d8c08a', '#ccb47e', '#e4cc96', '#c4ac76'], hot: [1700, 'moltenglass', 0.02], wrx: { to: 'wetsand', nb: '', c: 0.02 }, desc: 'Melts into glass at 1700°C.' });
+rock('wetsand', 'Wet Sand', '#a8905a', { dens: 33, slide: 0.05, si: 1, diggable: 1, colors: ['#a8905a', '#9c844e', '#b49c66'], hot: [100, 'sand', 0.01, 'steam'], decay: [0.00003, 'sandstone'], desc: 'Packs into shapes. Bakes dry.' });
 rock('sandstone', 'Sandstone', '#d4b07a', { dens: 34, slide: 0, si: 1, colors: ['#d4b07a', '#c8a46e', '#e0bc86'], hot: [1600, 'lava', 0.005] });
 rock('gravel', 'Gravel', '#8a8682', { dens: 32, slide: 0.6, colors: ['#8a8682', '#7a7672', '#9a9692', '#6a6662'], hot: [1200, 'lava', 0.005] });
 rock('rock', 'Rock', '#7e7a76', { dens: 33, slide: 0.15, colors: ['#7e7a76', '#726e6a', '#8a8682'], hot: [1200, 'lava', 0.004] });
@@ -22,7 +22,7 @@ rock('seashell', 'Seashell', '#f2e6dc', { dens: 25, slide: 0.4, carb: 1, carbM: 
 rock('dolomite', 'Dolomite', '#e0d4c8', { dens: 30, slide: 0.15, carb: 1, carbM: 'magnesium', hot: [700, 'magnesia', 0.004, 'co2'] });
 rock('quicklime', 'Quicklime', '#f4f2ea', { dens: 28, slide: 0.5, oxide: 1, mKey: 'calcium', base: 2, baseM: 'calcium', wrx: { to: 'slakedlime', nb: '', c: 0.05, heat: 150 }, desc: 'Gets hot enough to boil water when wet.' });
 rock('slakedlime', 'Slaked Lime', '#f0efe8', { dens: 26, slide: 0.4, base: 2, baseM: 'calcium', hot: [580, 'quicklime', 0.01, 'steam'], desc: 'Hardens back into limestone by soaking up CO2.' });
-rock('clay', 'Clay', '#b0603a', { dens: 28, slide: 0.4, colors: ['#b0603a', '#a45430', '#bc6c46'], wrx: { to: 'wetclay', nb: '', c: 0.03 }, hot: [1000, 'brick', 0.005] });
+rock('clay', 'Clay', '#b0603a', { dens: 28, slide: 0.4, diggable: 1, colors: ['#b0603a', '#a45430', '#bc6c46'], wrx: { to: 'wetclay', nb: '', c: 0.03 }, hot: [1000, 'brick', 0.005] });
 rock('wetclay', 'Wet Clay', '#9a5030', { dens: 30, slide: 0, w: 1, hot: [100, 'driedclay', 0.01, 'steam'], desc: 'Sculpt it, dry it, then fire it into ceramic.' });
 el('driedclay', 'Dried Clay', '#c4805a', 'minerals', 'solid', { cond: 0.1, hot: [900, 'ceramic', 0.005] });
 rock('mud', 'Mud', '#4a3020', { state: 'liquid' });

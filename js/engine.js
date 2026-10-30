@@ -13,7 +13,7 @@ E.forEach((e, i) => { e.id = i; ID[e.key] = i; });
 
 const ST = new Uint8Array(NE), DENS = new Float32Array(NE), COND = new Float32Array(NE);
 const VISC = new Float32Array(NE), IGN = new Uint8Array(NE), INVCAP = new Float32Array(NE).fill(1);
-const CONDUCT = new Uint8Array(NE), WET = new Uint8Array(NE), ORG = new Uint8Array(NE), MAGSRC = new Uint8Array(NE);
+const CONDUCT = new Uint8Array(NE), WET = new Uint8Array(NE), ORG = new Uint8Array(NE), MAGSRC = new Uint8Array(NE), DIGGABLE = new Uint8Array(NE);
 const PRODUCTS = new Set();
 
 // ---------- Compile element definitions ----------
@@ -43,6 +43,8 @@ for (const e of E) {
   CONDUCT[e.id] = e.econ ? 1 : 0;
   if (e.heatCap) INVCAP[e.id] = 1 / e.heatCap;
   MAGSRC[e.id] = e.magnet || e.shieldMag ? 1 : 0;
+  DIGGABLE[e.id] = e.diggable ? 1 : 0;
+  if (e.toggleTo) e.toggleId = idOf(e.toggleTo, e.key) || 0;
   if (e.magnetizeTo) e.magnetizeId = idOf(e.magnetizeTo, e.key) || 0;
   if (e.activeColor) {
     const a = hexRGB(e.activeColor);
@@ -88,6 +90,14 @@ for (const e of E) {
     const [r, g, b] = hexRGB(cols[k % cols.length]);
     const f = a * (1 + (((k * 5) % 3) - 1) * 0.05);
     e.pal[k] = pack(r * f | 0, g * f | 0, b * f | 0);
+  }
+  if (e.econ) {
+    // Powered tint: every conductor glows warm yellow-white while current flows through it
+    e.powPal = new Uint32Array(8);
+    for (let k = 0; k < 8; k++) {
+      const c = e.pal[k], r = c & 255, g = (c >> 8) & 255, b = (c >> 16) & 255;
+      e.powPal[k] = pack((r + 255) >> 1, (g + 236) >> 1, (b + 150) >> 1);
+    }
   }
   if (e.state === 'fire') {
     e.firePal = new Uint32Array(16);
@@ -457,29 +467,79 @@ const BEH = {
   ant(i, x, y) {
     const T = temp[i];
     if (T > 55 || T < -5) { become(i, DEADBUG); return true; }
-    if (Math.random() < 0.4) return true;
+    if (Math.random() < 0.2) return true;
+    let a = aux[i];
+    if ((a & 3) === 0) { a |= Math.random() < 0.5 ? 1 : 2; aux[i] = a; }
+    const dirt = a & 4, food = a & 8;
     if (y < H - 1) {
       const b = i + W, tb = type[b], s = ST[tb];
-      if (tb === 0 || s === ST_GAS) { swap(i, b); return true; }
       if (s === ST_LIQ) { if (Math.random() < 0.3) swap(i, b); return true; }
+      if ((tb === 0 || s === ST_GAS) && !antGrip(x, y)) { swap(i, b); return true; }
     }
     const d = (Math.random() * 8) | 0, nx = x + DX[d], ny = y + DY[d];
     if (inb(nx, ny)) {
-      const j = ny * W + nx, tj = type[j];
-      if (tj && E[tj].sw && ST[tj] !== ST_LIFE && Math.random() < 0.04) {
-        clearCell(j);
-        if (Math.random() < 0.15) spawnNear(x, y, ANT, T);
+      const j = ny * W + nx, tj = type[j], te = E[tj];
+      if (food && tj === ANTQUEEN) { aux[i] = a & ~8; aux[j] += 256; return true; }
+      if (!dirt && !food && tj && (te.sw || te.fd) && ST[tj] !== ST_LIFE && !te.alive && tj !== ANTFOOD && Math.random() < 0.05) {
+        clearCell(j); aux[i] = a | 8; return true;
+      }
+      if (food && tj === 0 && DY[d] >= 0 && antUnderground(x, y) && Math.random() < 0.03) { initCell(j, ANTFOOD, false); aux[i] = a & ~8; return true; }
+      // Dump dirt on solid ground beside the hole, never over it, so the anthill grows instead of refilling the tunnel
+      if (dirt && tj === 0 && DY[d] <= 0 && ny < H - 1 && type[j + W] && type[j + W] !== ID.ant && antSurface(x, y) && Math.random() < 0.25) { initCell(j, SOIL, false); aux[i] = a & ~4; return true; }
+      const under = antUnderground(x, y);
+      if (!dirt && !food && DIGGABLE[tj] && (DY[d] >= 0 || Math.random() < 0.2) && Math.random() < (under ? 0.2 : 0.05)) {
+        antDig(j, nx, ny); swap(i, j); aux[j] = a | 4; return true;
+      }
+    }
+    // Empty-handed workers head back down into the tunnels to dig deeper
+    if (!dirt && !food && y < H - 1 && type[i + W] === 0 && antGrip(x, y) && Math.random() < 0.4) { swap(i, i + W); return true; }
+    if (food && !antUnderground(x, y) && Math.random() < 0.002) aux[i] = a & ~8;
+    if (dirt && y > 0) {
+      // Push up through loose soil that fell back into the tunnel
+      const u = i - W;
+      if (DIGGABLE[type[u]] && Math.random() < 0.3) { swap(i, u); return true; }
+      // Stuck too long underground: tamp the dirt into the tunnel wall instead
+      if (antUnderground(x, y) && Math.random() < 0.002) {
+        aux[i] = a & ~4;
+        for (let k = 0; k < 8; k++) { const nx2 = x + DX[k], ny2 = y + DY[k]; if (inb(nx2, ny2) && DIGGABLE[type[ny2 * W + nx2]]) { become(ny2 * W + nx2, PACKED); break; } }
         return true;
       }
     }
-    if (aux[i] === 0) aux[i] = Math.random() < 0.5 ? 1 : 2;
-    const sx = aux[i] === 1 ? 1 : -1, fx = x + sx;
-    if (fx < 0 || fx >= W) { aux[i] = 3 - aux[i]; return true; }
-    const f = i + sx;
-    if (type[f] === 0) { swap(i, f); return true; }
-    if (y > 0 && type[f - W] === 0 && type[i - W] === 0) { swap(i, f - W); return true; }
-    if (y > 0 && type[i - W] === 0 && Math.random() < 0.5) { swap(i, i - W); return true; }
-    aux[i] = 3 - aux[i];
+    // Dirt goes up and out, food goes down and in
+    if (dirt && y > 0 && (type[i - W] === 0 || (type[i - W] === ID.ant && Math.random() < 0.3)) && Math.random() < 0.5) { swap(i, i - W); return true; }
+    if (food && y < H - 1 && (type[i + W] === 0 || (type[i + W] === ID.ant && Math.random() < 0.3)) && Math.random() < 0.5) { swap(i, i + W); return true; }
+    return antWalk(i, x, y, a);
+  },
+  antqueen(i, x, y) {
+    const T = temp[i];
+    if (T > 55 || T < -5) { become(i, DEADBUG); return true; }
+    if (y < H - 1) {
+      const b = i + W, tb = type[b], s = ST[tb];
+      if (s === ST_LIQ) { if (Math.random() < 0.3) swap(i, b); return true; }
+      if ((tb === 0 || s === ST_GAS) && !antGrip(x, y)) { swap(i, b); return true; }
+    }
+    if (Math.random() < 0.8) return true;
+    const a = aux[i], settled = a & 1;
+    let depth = (a >> 1) & 63, stock = a >> 8;
+    if (!settled) {
+      const b = i + W;
+      if (y < H - 1 && (DIGGABLE[type[b]] || type[b] === PACKED)) {
+        antDig(b, x, y + 1); swap(i, b); depth++;
+        if (depth >= 10 || y + 2 >= H) { carveDen(x, y + 1); aux[b] = 1 | (depth << 1); }
+        else aux[b] = depth << 1;
+        return true;
+      }
+      if (depth > 0) { carveDen(x, y); aux[i] = 1 | (depth << 1); return true; }
+      return antWalk(i, x, y, (a & 0x7e) ? a : a | 0x80);
+    }
+    for (let d = 0; d < 8; d++) {
+      const nx = x + DX[d], ny = y + DY[d];
+      if (inb(nx, ny) && type[ny * W + nx] === ANTFOOD) { clearCell(ny * W + nx); stock++; break; }
+    }
+    if (antPop < 400 && Math.random() < (stock > 0 ? 0.06 : 0.004)) {
+      if (spawnNear(x, y, ANTEGG, temp[i]) >= 0 && stock > 0) stock--;
+    }
+    aux[i] = 1 | (depth << 1) | (Math.min(stock, 1000) << 8);
     return true;
   },
   fly(i, x, y) {
@@ -514,6 +574,101 @@ const BEH = {
     return true;
   },
 };
+
+// ---------- Ant colonies ----------
+const ANTQUEEN = ID.antqueen, ANTEGG = ID.antegg, ANTFOOD = ID.antfood, PACKED = ID.packedsoil;
+let antPop = 0;
+function antGrip(x, y) {
+  for (let d = 0; d < 8; d++) {
+    const nx = x + DX[d], ny = y + DY[d];
+    if (!inb(nx, ny)) continue;
+    const t = type[ny * W + nx], s = ST[t];
+    if (t && s !== ST_GAS && s !== ST_LIQ && s !== ST_FIRE && s !== ST_LIFE) return true;
+  }
+  return false;
+}
+function antUnderground(x, y) {
+  let n = 0;
+  for (let d = 0; d < 8; d++) {
+    const nx = x + DX[d], ny = y + DY[d];
+    if (!inb(nx, ny)) { n++; continue; }
+    const t = type[ny * W + nx];
+    if (t === PACKED || DIGGABLE[t]) n++;
+  }
+  return n >= 3;
+}
+function antSurface(x, y) {
+  for (let k = 1; k <= 5; k++) {
+    if (y - k < 0) return true;
+    const t = type[(y - k) * W + x];
+    if (t && ST[t] !== ST_GAS && ST[t] !== ST_LIFE) return false;
+  }
+  return true;
+}
+// Dig one cell out and cement the loose soil around it so the tunnel holds
+function antDig(j, nx, ny) {
+  clearCell(j);
+  for (let d = 0; d < 8; d += 2) {
+    const ax = nx + DX[d], ay = ny + DY[d];
+    if (!inb(ax, ay)) continue;
+    const k = ay * W + ax, tk = type[k];
+    if (DIGGABLE[tk] && Math.random() < 0.85) become(k, tk === ID.sand ? ID.wetsand : PACKED);
+  }
+}
+function carveDen(cx, cy) {
+  for (let dy = -4; dy <= 2; dy++) for (let dx = -6; dx <= 6; dx++) {
+    const x = cx + dx, y = cy + dy;
+    if (!inb(x, y) || (dx === 0 && dy === 0)) continue;
+    const r = (dx * dx) / 25 + (dy * dy) / (dy < 0 ? 9 : 2.5), k = y * W + x, t = type[k];
+    if (r <= 1) { if (DIGGABLE[t] || t === PACKED) clearCell(k); }
+    else if (r <= 1.7 && DIGGABLE[t]) become(k, PACKED);
+  }
+}
+function antWalk(i, x, y, a) {
+  const sx = (a & 3) === 2 ? -1 : 1, fx = x + sx;
+  if (fx < 0 || fx >= W) { aux[i] = a ^ 3; return true; }
+  const f = i + sx;
+  if (type[f] === 0) { swap(i, f); return true; }
+  if (y > 0 && type[f - W] === 0 && type[i - W] === 0) { swap(i, f - W); return true; }
+  if (y > 0 && type[i - W] === 0 && Math.random() < 0.5) { swap(i, i - W); return true; }
+  if (y < H - 1 && type[f + W] === 0 && Math.random() < 0.3) { swap(i, f + W); return true; }
+  if (type[f] === ID.ant && Math.random() < 0.3) { swap(i, f); return true; }
+  aux[i] = a ^ 3;
+  return true;
+}
+
+// ---------- Switches and quick delete ----------
+function toggleAt(x, y) {
+  const t0 = type[y * W + x], e = E[t0];
+  if (!e.toggleId) return 0;
+  const to = e.toggleId, stack = [y * W + x];
+  let n = 0;
+  while (stack.length) {
+    const i = stack.pop();
+    if (type[i] !== t0) continue;
+    const T = temp[i];
+    initCell(i, to, true); temp[i] = T; n++;
+    const cx = i % W, cy = (i / W) | 0;
+    if (cx > 0) stack.push(i - 1); if (cx < W - 1) stack.push(i + 1);
+    if (cy > 0) stack.push(i - W); if (cy < H - 1) stack.push(i + W);
+  }
+  return n;
+}
+function removeConnected(x, y) {
+  const t0 = type[y * W + x];
+  if (!t0) return 0;
+  const stack = [y * W + x];
+  let n = 0;
+  while (stack.length && n < N) {
+    const i = stack.pop();
+    if (type[i] !== t0) continue;
+    clearCell(i); temp[i] = AMBIENT; n++;
+    const cx = i % W, cy = (i / W) | 0;
+    if (cx > 0) stack.push(i - 1); if (cx < W - 1) stack.push(i + 1);
+    if (cy > 0) stack.push(i - W); if (cy < H - 1) stack.push(i + W);
+  }
+  return n;
+}
 
 // ---------- Movement ----------
 function sinkable(t, j) {
@@ -705,7 +860,7 @@ function electricity() {
     if (!CONDUCT[t]) { elec[i] = 0; continue; }
     if (v === 3) {
       const x = i % W, y = (i / W) | 0, e = E[t];
-      if (e.plasmaC || e.emag || e.needsPower) plasmaGlow[i] = 12;
+      plasmaGlow[i] = 12;
       for (let d = 0; d < 8; d += 2) {
         const nx = x + DX[d], ny = y + DY[d];
         if (!inb(nx, ny)) continue;
@@ -743,6 +898,7 @@ const MB = 4, MBW = Math.ceil(W / MB), MBH = Math.ceil(H / MB), MNB = MBW * MBH;
 const fieldX = new Float32Array(MNB), fieldY = new Float32Array(MNB), fieldSrc = new Float32Array(MNB), fieldShield = new Uint8Array(MNB);
 let magnetLive = false;
 function deviceActive(i, e) {
+  if (e.alwaysActive) return true;
   if (e.magnet) return magnetActive(i, e);
   return e.needsPower ? plasmaGlow[i] > 0 : false;
 }
@@ -911,6 +1067,7 @@ function step() {
   }
   electricity();
   if ((tick & 3) === 0) updateField();
+  if (tick % 120 === 0) { let n = 0; for (let i = 0; i < N; i++) if (type[i] === ID.ant || type[i] === ANTEGG) n++; antPop = n; }
   conduct();
 }
 

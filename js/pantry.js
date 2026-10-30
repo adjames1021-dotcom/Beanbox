@@ -189,10 +189,17 @@ sweet('sherbet', 'Sherbet Powder', '#f7ee9d', 'powder', { dens: 24, slide: 0.8, 
 
 // ---------- Living things & garden ----------
 const bio = (k, n, c, state, p) => el(k, n, c, 'life', state, p);
-bio('soil', 'Soil', '#5b3a1f', 'powder', { dens: 30, slide: 0.3, colors: ['#5b3a1f', '#4a2e18', '#6a4426'], desc: 'Plant beans or wheat in it.' });
-bio('compost', 'Compost', '#3a2a14', 'powder', { dens: 28, slide: 0.3, colors: ['#3a2a14', '#2e2210', '#4a361c'] });
+bio('soil', 'Soil', '#5b3a1f', 'powder', { dens: 30, slide: 0.3, diggable: 1, colors: ['#5b3a1f', '#4a2e18', '#6a4426'], desc: 'Plant beans or wheat in it.' });
+bio('compost', 'Compost', '#3a2a14', 'powder', { dens: 28, slide: 0.3, diggable: 1, colors: ['#3a2a14', '#2e2210', '#4a361c'] });
 bio('mold', 'Mold', '#6fa34a', 'powder', { dens: 8, slide: 0.15, beh: 'mold', hot: [70, 'ash', 0.02], colors: ['#6fa34a', '#4c7f30', '#a3c46e', '#e0e8d0'], desc: 'Grows on food left out warm. Spreads.' });
-bio('ant', 'Ant', '#2a1a10', 'life', { beh: 'ant', burn: 0.3, ign: 60, burnTo: 'deadbug', desc: 'Marches around eating anything sweet.' });
+bio('ant', 'Ant', '#a8301a', 'life', { beh: 'ant', colors: ['#a8301a', '#c03a20', '#8a2412'], burn: 0.3, ign: 60, burnTo: 'deadbug', desc: 'Worker ant. Digs tunnels in soil, piles the dirt into anthills and carries food home to the queen.' });
+bio('antqueen', 'Queen Ant', '#f0b040', 'life', { beh: 'antqueen', burn: 0.3, ign: 60, burnTo: 'deadbug', alive: 1, deadTo: 'deadbug', desc: 'Drop her on soil. She digs down, carves a den and lays eggs. Workers bring her food so she lays faster.' });
+bio('antegg', 'Ant Egg', '#f4f0e4', 'powder', { dens: 8, slide: 0.2, alive: 1, deadTo: 'deadbug', life: [900, 1600], die: 'ant', hot: [45, 'deadbug', 0.02], cold: [0, 'deadbug', 0.01], colors: ['#f4f0e4', '#fffaf0', '#ece6d6'], desc: 'Hatches into a worker ant.' });
+bio('packedsoil', 'Packed Soil', '#3e2616', 'solid', { cond: 0.1, colors: ['#3e2616', '#352012', '#48301c'], desc: 'Tunnel walls cemented by ants. Holds its shape.' });
+bio('antfood', 'Stored Food', '#c8a050', 'powder', { dens: 12, slide: 0.1, colors: ['#c8a050', '#d8b468', '#a8803a'], desc: 'Food the workers carried home for the queen.' });
+R('antqueen', 'water', 'deadbug', '=', 0.002);
+R('antegg', 'water', 'deadbug', '=', 0.004);
+C('packedsoil', 'soil');
 bio('fly', 'Fruit Fly', '#6a5a46', 'life', { beh: 'fly', burn: 0.3, ign: 60, burnTo: 'deadbug', desc: 'Loves fruit and mold.' });
 bio('worm', 'Worm', '#d47a7a', 'life', { beh: 'worm', burn: 0.3, ign: 60, burnTo: 'deadbug', desc: 'Turns scraps into compost.' });
 bio('deadbug', 'Dead Bug', '#3a2f28', 'powder', { dens: 10, slide: 0.5, hidden: 1 });

@@ -86,11 +86,13 @@ el('radiation', 'Radiation', '#7aff5a', 'energy', 'special', { beh: 'rad', ray: 
 el('radium', 'Radium', '#d8f0c0', 'metals', 'powder', { dens: 55, slide: 0.3, glow: 1, selfHeat: 0.03, emit: ['radiation', 0.01, -273], colors: ['#d8f0c0', '#a8ff80', '#c8f0b0'], desc: 'Glows green in the dark. Very radioactive.' });
 
 // ---------- Power ----------
-el('battery', 'Battery', '#d8a020', 'power', 'solid', { beh: 'battery', cond: 0.1, colors: ['#d8a020', '#2a2a2a', '#d8a020'], desc: 'Sends pulses of electricity into touching metal, graphite, salt water and noble gases.' });
-el('outlet', 'Wall Outlet', '#e8e4dc', 'power', 'solid', { beh: 'battery', cond: 0.05, colors: ['#e8e4dc', '#2a2a2a', '#e8e4dc', '#f2eee6'], desc: 'Mains power for appliances. Touch it to a burner, fridge or microwave, or run Copper Wire from it.' });
+el('battery', 'Battery', '#d8a020', 'power', 'solid', { beh: 'battery', cond: 0.1, colors: ['#d8a020', '#2a2a2a', '#d8a020'], activeColor: '#ffd84a', activeGlow: 1, alwaysActive: 1, desc: 'Sends pulses of electricity into touching metal, graphite, salt water and noble gases.' });
+el('outlet', 'Wall Outlet', '#e8e4dc', 'power', 'solid', { beh: 'battery', cond: 0.05, colors: ['#e8e4dc', '#2a2a2a', '#e8e4dc', '#f2eee6'], activeColor: '#f8fff0', activeGlow: 1, alwaysActive: 1, desc: 'Mains power for appliances. Touch it to a burner, fridge or microwave, or run Copper Wire from it.' });
 R('gasstove_on', 'water', 'gasstove', 'steam', 0.3);
 R('gasstove_on', 'co2', 'gasstove', '=', 0.3);
 R('gasstove_on', 'foam', 'gasstove', '', 0.3);
+el('switch', 'Switch', '#7a1a1a', 'power', 'solid', { cond: 0.1, toggleTo: 'switch_on', colors: ['#7a1a1a', '#8a2424', '#3a3a3a'], desc: 'Click it to flip it on or off. Off, it blocks electricity like rubber.' });
+el('switch_on', 'Switch (On)', '#2a8a3a', 'power', 'solid', { econ: 1, cond: 0.1, toggleTo: 'switch', nomenu: 1, colors: ['#2a8a3a', '#34a046', '#3a3a3a'], activeColor: '#5aff7a', activeGlow: 1, alwaysActive: 1, desc: 'On: electricity flows through. Click to switch off.' });
 el('rubber', 'Rubber', '#2a2a2a', 'power', 'solid', { cond: 0.05, hot: [200, 'smoke', 0.01], burn: 0.02, ign: 350, desc: 'Insulator. Electricity cannot pass.' });
 el('wire', 'Copper Wire', '#d08848', 'power', 'solid', { econ: 1, metal: 1, mKey: 'copper', metalForm: 1, cond: 0.9, hot: [1085, 'copper_molten', 0.02], desc: 'Thin copper wire for circuits.' });
 el('lamp', 'Lamp Filament', '#8a8c90', 'power', 'solid', { econ: 1, chargeHeat: 120, cond: 0.3, hot: [3422, 'tungsten_molten', 0.01], desc: 'Tungsten filament. Seal it in glass with argon and power it.' });

@@ -12,6 +12,8 @@ Open `index.html` in any modern browser. No build step or server is needed. The 
 | Right drag | Draw the right (blue) element, the Eraser by default |
 | Shift + drag | Straight line |
 | Middle click | Pick the element under the cursor |
+| `Delete` (hold) | Erase under the cursor; `Shift` + `Delete` removes the whole connected piece |
+| Click a Switch | Flip it on or off |
 | Wheel or `[` `]` | Brush size |
 | `Space` / `F` | Pause / step one frame |
 | `H` / `G` / `M` | Heat view / fire glow / magnetic field view |
@@ -29,8 +31,9 @@ Soaked and cooked beans, frozen mercury and other in-between forms are made by c
 - **Food**: 13 kinds of beans (dry, soaked and cooked), 22 vegetables (raw, chopped and cooked), 17 fruits (whole, juice, jam and ice pops), 13 meats and seafoods, dairy and eggs, breads, pastas, pizza, cakes, candy, sauces, soups and drinks.
 - **Periodic table**: elements 1 to 96, each with its real melting point, density and reactivity. Metals come as blocks, dust and molten liquid. The Periodic Table button opens a clickable table.
 - **Earth and chemistry**: sand, rocks, clay, cement, plaster, lava, 21 ores, 17 gems, metal oxides, about 60 salt solutions and crystals, strong and weak acids, bases, explosives, coloured flames, radiation and noble gases.
-- **Electricity**: batteries, copper wire, tungsten filaments, nichrome heating wire and neon tubes. Current splits water, lights gases and electroplates metal.
+- **Electricity**: batteries, wall outlets, copper wire, on/off switches, tungsten filaments, nichrome heating wire and neon tubes. Everything carrying current glows. Current splits water, lights gases and electroplates metal.
 - **Magnets**: neodymium, samarium-cobalt, alnico, ferrite and fridge magnets, lodestone, magnetised steel, battery-powered electromagnets and liquid-helium superconducting magnets. They pull iron, steel, nickel, cobalt, magnetite and ferrofluid, lose their pull above their Curie point, and push away bismuth, pyrolytic graphite and chilled superconductors so they float. Mu-metal blocks fields, an Induction Hob heats only magnetic pans, a Magnetic Stirrer mixes what sits on it, and a Field Compass shows the field's direction.
+- **Ant colonies**: worker ants dig tunnels through soil, sand and clay, cement the walls, pile dirt into anthills and carry food underground. A Queen Ant digs a den and lays eggs that hatch into more workers, faster when she is fed.
 - **Physics**: every particle carries a temperature. Heat spreads through metal and is blocked by glass and the counter. Powders pile, liquids layer by density (oil floats on water), gases rise or sink (CO2 sinks and smothers fire), and things boil, freeze, melt, cook, burn, ferment, rot and grow.
 
 ## A few combos to try
@@ -47,6 +50,8 @@ Soaked and cooked beans, frozen mercury and other in-between forms are made by c
 - A Superconductor chilled in Liquid Nitrogen, dropped over a magnet.
 - A cast-iron pan and a copper pot side by side on an Induction Hob.
 - An Electromagnet wired to a Battery, then the battery erased.
+- A glass tank of Soil with a Queen Ant, a few Ants and some sugar on top.
+- Battery, Copper Wire, a Switch and an Electric Burner: click the switch.
 
 - Steel pot of water on a Burner, then dry beans: they soak, cook, and slowly release Bean Gas. Keep flames away.
 - Cooking Oil and Popcorn Kernels in a hot pan.
